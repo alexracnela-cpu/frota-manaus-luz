@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4ea8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Frota Manaus Luz</title>
+<link rel="icon" href="assets/icone-192.png">
+<link rel="apple-touch-icon" href="assets/icone-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/estilo.css">
+<style>
+  html,body{margin:0;min-height:100%}
+  body.campo{background:var(--bg)}
+  body.campo .screen{max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;border-radius:0;
+    padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  body.campo .pane{padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+  .carregando{position:fixed;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 70%,transparent);z-index:40;font-weight:600}
+  .carregando span{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 20px}
+</style>
+</head>
+<body class="campo">
+<div class="screen fundo">
+  <div class="faixa fina" aria-hidden="true"></div>
+
+  <!-- configuração faltando -->
+  <div id="s-config" class="pane" hidden style="padding-top:30px">
+    <h2>Falta configurar</h2>
+    <div class="alert">Abra o arquivo <b>assets/config.js</b> e cole a Project URL e a chave pública do Supabase.</div>
+  </div>
+
+  <!-- início -->
+  <div id="s-inicio" class="pane" hidden style="padding-top:22px">
+    <div class="inicio-logo"><img src="assets/logo-branco.png" alt="Manaus Luz"><div><h2 style="font-size:26px">Frota Manaus Luz</h2><div class="who">O que você vai registrar?</div></div></div>
+    <div class="mods">
+      <button type="button" class="mod" data-mod="abastecimento"><span class="ic" id="ic-ab"></span><span><b>Abastecimento</b></span></button>
+      <button type="button" class="mod" data-mod="oleo"><span class="ic" id="ic-ol"></span><span><b>Troca de óleo</b></span></button>
+    </div>
+  </div>
+
+  <!-- login -->
+  <div id="s-login" class="pane" hidden style="padding-top:12px">
+    <button type="button" class="voltar" id="voltar"></button>
+    <div><h2 style="font-size:26px">Entrar</h2><div class="who">Escolha seu nome e digite seu PIN</div><span class="modtag" id="modtag"></span></div>
+    <div class="users" id="users"></div>
+    <div class="pin-dots" id="dots"><span></span><span></span><span></span><span></span></div>
+    <div class="hint" id="pin-msg" style="justify-content:center"></div>
+    <div class="err" id="pin-err" role="alert"></div>
+    <div class="pad" id="pad"></div>
+  </div>
+
+  <!-- abastecimento -->
+  <div id="s-form" hidden>
+    <div class="appbar"><div><h2>Novo abastecimento</h2><div class="who" id="who"></div></div><button class="linkbtn" id="sair">Sair</button></div>
+    <form class="pane" id="form" novalidate>
+      <div class="auto" id="agora"></div>
+      <div class="field"><label for="f-placa">Veículo</label><select id="f-placa"></select><div class="hint" id="ultimo"></div></div>
+      <div class="field"><label for="f-mot">Motorista</label><select id="f-mot"></select></div>
+      <div class="two">
+        <div class="field"><label for="f-l">Litros</label><input id="f-l" class="num" inputmode="decimal" placeholder="0,0" autocomplete="off"></div>
+        <div class="field"><label for="f-km">Km do painel</label><input id="f-km" class="num" inputmode="numeric" placeholder="000000" autocomplete="off"></div>
+      </div>
+      <div class="field"><label>Fotos obrigatórias</label>
+        <div class="fotos">
+          <label class="foto" data-f="painel"><input type="file" accept="image/*" capture="environment"><span>📷</span><span>Painel (km)</span></label>
+          <label class="foto" data-f="placa"><input type="file" accept="image/*" capture="environment"><span>📷</span><span>Placa</span></label>
+          <label class="foto" data-f="bomba"><input type="file" accept="image/*" capture="environment"><span>📷</span><span>Visor da bomba</span></label>
+        </div></div>
+      <div id="alerta" class="alert" hidden role="alert"></div>
+      <button class="btn btn-main" type="submit" id="btn-ab">Registrar abastecimento</button>
+    </form>
+  </div>
+
+  <!-- troca de óleo: lista de aprovados -->
+  <div id="s-oleo" class="pane" hidden style="padding-top:12px">
+    <div class="appbar" style="padding:0"><div><h2>Troca de óleo</h2><div class="who" id="who-oleo"></div></div><button class="linkbtn" id="sair-oleo">Sair</button></div>
+    <div class="who" style="margin-top:-4px">Veículos aprovados para troca. Toque no veículo para registrar.</div>
+    <div class="users" id="lista-apr"></div>
+  </div>
+
+  <!-- troca de óleo: formulário -->
+  <div id="s-oleo-form" hidden>
+    <div class="appbar"><div><h2>Registrar troca</h2></div><button type="button" class="voltar" id="o-voltar" style="padding:6px 14px 6px 10px;font-size:14px"></button></div>
+    <form class="pane" id="o-form" novalidate>
+      <div class="veic-box" id="o-veic"></div>
+      <div id="o-quem" class="quem" hidden>
+        <div class="quem-t">Quem está levando o veículo</div>
+        <div class="field"><label for="o-nome">Nome completo</label><input id="o-nome" list="lista-mot" autocomplete="off" placeholder="Digite ou escolha"></div>
+        <datalist id="lista-mot"></datalist>
+        <div class="two">
+          <div class="field"><label for="o-re">RE</label><input id="o-re" class="num" inputmode="numeric" autocomplete="off" placeholder="Matrícula"></div>
+          <div class="field"><label for="o-funcao">Função</label><select id="o-funcao"></select></div>
+        </div>
+      </div>
+      <div class="auto" id="o-agora"></div>
+      <div class="field"><label for="o-estab">Local da troca</label><select id="o-estab"></select></div>
+      <div class="field"><label for="o-oleo">Óleo usado</label><select id="o-oleo"></select></div>
+      <div class="two">
+        <div class="field"><label for="o-km">Km do painel</label><input id="o-km" class="num" inputmode="numeric" placeholder="000000" autocomplete="off"></div>
+        <div class="field"><label for="o-req">Requisição do posto</label><input id="o-req" class="num" inputmode="numeric" placeholder="00000" autocomplete="off"></div>
+      </div>
+      <div class="hint" id="o-kmhint"></div>
+      <div class="field"><label>Trocou o filtro de óleo?</label><div class="sn"><label><input type="radio" name="o-fo" value="s">Sim</label><label><input type="radio" name="o-fo" value="n">Não</label></div></div>
+      <div class="field"><label>Trocou o filtro de combustível?</label><div class="sn"><label><input type="radio" name="o-fc" value="s">Sim</label><label><input type="radio" name="o-fc" value="n">Não</label></div></div>
+      <div class="field"><label>Fotos obrigatórias</label>
+        <div class="fotos" style="grid-template-columns:1fr 1fr">
+          <label class="foto" data-f="o-placa"><input type="file" accept="image/*" capture="environment"><span>📷</span><span>Placa</span></label>
+          <label class="foto" data-f="o-adesivo"><input type="file" accept="image/*" capture="environment"><span>📷</span><span>Adesivo da troca</span></label>
+        </div></div>
+      <div id="o-alerta" class="alert" hidden role="alert"></div>
+      <button class="btn btn-main" type="submit" id="btn-ol">Registrar troca</button>
+    </form>
+  </div>
+
+  <!-- confirmação -->
+  <div id="s-done" class="pane" hidden>
+    <div class="faixa" aria-hidden="true" style="margin:0 -18px"></div>
+    <div class="done">
+      <div class="check"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h2 style="font-size:26px">Registrado</h2>
+      <div class="receipt" id="recibo"></div>
+      <div class="auto" id="saida" style="width:100%"></div>
+      <button class="btn btn-main" id="novo" style="width:100%">Registrar outro</button>
+      <button class="btn btn-ghost" id="sair2" style="width:100%">Sair agora</button>
+    </div>
+  </div>
+</div>
+<div class="carregando" id="carregando" hidden><span id="carregando-t">Enviando…</span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="assets/config.js"></script>
+<script src="assets/comum.js"></script>
+<script src="assets/campo.js"></script>
+</body>
+</html>
