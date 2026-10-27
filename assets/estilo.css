@@ -95,6 +95,9 @@ button,input,select{font:inherit;color:inherit}
   -webkit-mask-image:linear-gradient(to bottom right,#000 0 13%,transparent 24% 76%,#000 87%);
   mask-image:linear-gradient(to bottom right,#000 0 13%,transparent 24% 76%,#000 87%)}
 .screen.fundo .user,.screen.fundo .pad button,.screen.fundo .mod{box-shadow:0 2px 10px rgba(11,40,90,.08)}
+.screen.fundo .field select,.screen.fundo .field input,.screen.fundo .foto,.screen.fundo .auto{box-shadow:0 2px 10px rgba(11,40,90,.08)}
+.screen.fundo .auto{background:var(--surface)}
+.screen.fundo .appbar h2,.screen.fundo .who,.screen.fundo .linkbtn,.screen.fundo .field>label,.screen.fundo .hint{text-shadow:0 0 6px var(--fundo-c),0 0 12px var(--fundo-c)}
 .mods{display:flex;flex-direction:column;gap:16px;flex:1;padding-bottom:8px}
 .mod{flex:1;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:24px 20px;cursor:pointer;position:relative;overflow:hidden}
 .mod:active{transform:scale(.98)}

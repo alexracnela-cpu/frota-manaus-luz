@@ -13,7 +13,7 @@ let tSaida = null, tInativo = null;
 const telas = ['s-config', 's-inicio', 's-login', 's-form', 's-oleo', 's-oleo-form', 's-done'];
 function tela(id) {
   telas.forEach(s => $(s).hidden = s !== id);
-  document.querySelector('.screen').classList.toggle('fundo', id === 's-inicio' || id === 's-login');
+  document.querySelector('.screen').classList.toggle('fundo', id === 's-inicio' || id === 's-login' || id === 's-form');
   if (id !== 's-done') clearInterval(tSaida);
   if (id === 's-login' || id === 's-inicio') clearTimeout(tInativo); else inativo();
   window.scrollTo(0, 0);
