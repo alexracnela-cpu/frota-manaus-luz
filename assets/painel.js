@@ -3,6 +3,8 @@ const LIMITE = 1500;
 const COLS_PESSOAS = 'id,nome,re,funcao,papeis,email,ativo,criado_em,tem_pin';
 let eu = null, VE = [], PE = [], AB = [], PD = [], TR = [], LI = [];
 const papel = p => eu && (eu.papeis.includes(p) || eu.papeis.includes('admin'));
+const opera = () => papel('lider') || papel('assistente');  // solicita, autoriza, lança custo, corrige km
+const cadastra = () => papel('lider');                        // aba Cadastros: só líder e admin
 const pessoaNome = id => (PE.find(p => p.id === id) || {}).nome;
 const veic = pl => VE.find(v => v.placa === pl) || { placa: pl };
 
@@ -55,8 +57,8 @@ async function entrarPainel() {
     return;
   }
   $('user-nome').textContent = curto(eu.nome); $('user-top').hidden = false;
-  $('tab-btn-cad').hidden = !papel('lider');
-  $('th-corr').hidden = !papel('lider');
+  $('tab-btn-cad').hidden = !cadastra();
+  $('th-corr').hidden = !opera();
   mostrar('painel'); await carregarTudo();
 }
 
@@ -79,7 +81,7 @@ async function carregarTudo() {
   } catch (e) { $('note').textContent = 'Não consegui carregar os dados: ' + e.message; return; }
   AB.forEach(r => { r.t = new Date(r.registrado_em); r.l = r.litros == null ? 0 : Number(r.litros); });
   TR.forEach(r => { r.d = new Date(r.data); });
-  analisar(); montarFiltros(); pintaDatas(); render(); renderOleo(); if (papel('lider')) renderCad();
+  analisar(); montarFiltros(); pintaDatas(); render(); renderOleo(); if (cadastra()) renderCad();
 }
 // recarrega os dados a cada 2 minutos, para ver o que a portaria lançou
 setInterval(() => { if (eu && document.visibilityState === 'visible' && !document.querySelector('.form-cad:not([hidden])')) carregarTudo(); }, 120000);
@@ -212,7 +214,7 @@ function render() {
   const fu = () => ult.map(linhaU).join('') || '<tr><td colspan="7" class="empty">Nenhum abastecimento neste filtro.</td></tr>';
   $('ult').innerHTML = fu(); pintarFotos(ult, $('ult'), fu);
   const rv = f.filter(x => x.sus).sort((a, b) => b.t - a.t);
-  const fr = () => rv.length ? rv.map(x => `<tr><td class="num">${fdt(x.t)}</td><td>${esc(x.placa)}</td><td>${esc(curto(pessoaNome(x.motorista_id)))}</td><td>${esc(curto(pessoaNome(x.porteiro_id)))}</td><td class="r num">${x.semL ? `<span class="bad">${x.litros_original != null ? fmt(x.litros_original, 1) + ' ?' : '—'}</span>` : fmt(x.l, 1)}</td><td class="r num">${x.semL && x.esp == null ? fmt(x.km) : `<span class="bad">${fmt(x.km)}</span>`}</td><td class="r num">${x.esp != null ? '≈ ' + fmt(x.esp) : '—'}</td><td>${thumbs(x.fotos, x.placa + ' · ' + fdt(x.t))}</td>${papel('lider') ? `<td><div class="ed-km"><input id="ck-${x.id}" class="num" inputmode="numeric" placeholder="km certo" aria-label="Km correto"><button type="button" class="btn btn-sm btn-ghost" data-corr="${x.id}">Salvar</button></div></td>` : ''}</tr>`).join('') : `<tr><td colspan="9" class="empty">Nenhum registro para revisar neste filtro.</td></tr>`;
+  const fr = () => rv.length ? rv.map(x => `<tr><td class="num">${fdt(x.t)}</td><td>${esc(x.placa)}</td><td>${esc(curto(pessoaNome(x.motorista_id)))}</td><td>${esc(curto(pessoaNome(x.porteiro_id)))}</td><td class="r num">${x.semL ? `<span class="bad">${x.litros_original != null ? fmt(x.litros_original, 1) + ' ?' : '—'}</span>` : fmt(x.l, 1)}</td><td class="r num">${x.semL && x.esp == null ? fmt(x.km) : `<span class="bad">${fmt(x.km)}</span>`}</td><td class="r num">${x.esp != null ? '≈ ' + fmt(x.esp) : '—'}</td><td>${thumbs(x.fotos, x.placa + ' · ' + fdt(x.t))}</td>${opera() ? `<td><div class="ed-km"><input id="ck-${x.id}" class="num" inputmode="numeric" placeholder="km certo" aria-label="Km correto"><button type="button" class="btn btn-sm btn-ghost" data-corr="${x.id}">Salvar</button></div></td>` : ''}</tr>`).join('') : `<tr><td colspan="9" class="empty">Nenhum registro para revisar neste filtro.</td></tr>`;
   $('rev').innerHTML = fr(); pintarFotos(rv, $('rev'), fr);
 }
 $('rev').addEventListener('click', async e => {
@@ -267,7 +269,7 @@ function renderOleo() {
     <div class="kpi"><span class="l">Gasto em ${ano}</span><span class="v" style="font-size:28px">${real(gasto)}</span><span class="s">${doAno.length} trocas no ano</span></div>`;
   $('sit').innerHTML = lista.map(({ v, s }) => { const pa = pedidoAberto(v.placa); let acao = '';
     if (pa) acao = `<span class="pill info">${{ solicitado: 'Aguardando aprovação', aprovado: 'Aprovado', realizado: 'Feito · custo pendente' }[pa.status]}</span>`;
-    else if (papel('lider') && !v.garantia) acao = `<button type="button" class="btn btn-sm ${s.o < 2 ? 'btn-main' : 'btn-ghost'}" data-sol="${esc(v.placa)}">Solicitar troca</button>`;
+    else if (opera() && !v.garantia) acao = `<button type="button" class="btn btn-sm ${s.o < 2 ? 'btn-main' : 'btn-ghost'}" data-sol="${esc(v.placa)}">Solicitar troca</button>`;
     return `<tr><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || v.tipo || '')}</small></td><td>${esc(v.categoria)}</td><td class="num">${s.ut ? dataBr(s.ut.d) : '—'}<br><small class="mut">${s.ut && s.ut.km != null ? fmt(s.ut.km) + ' km' : s.ut ? 'km não informado' : ''}</small></td><td class="r num">${s.km != null ? fmt(s.km) : s.susp ? '<span class="bad">conferir</span>' : '—'}</td><td class="r num">${s.prox != null && !v.garantia ? fmt(s.prox) : '—'}</td><td><span class="pill ${s.cls}">${s.txt}</span><br><small class="mut">${s.det}</small></td><td class="r">${acao}</td></tr>`; }).join('');
 
   const ord = { solicitado: 0, realizado: 1, aprovado: 2, recusado: 3, fechado: 4, cancelado: 5 };
@@ -276,10 +278,10 @@ function renderOleo() {
   const fp = () => ps.map(x => { const v = veic(x.placa), t = trocaDoPedido(x.id); let act = '';
     if (x.status === 'solicitado' && papel('gerente')) act = `<div class="ped-act"><button type="button" class="btn btn-sm btn-main" data-apr="${x.id}">Aprovar</button><input id="mot-${x.id}" placeholder="Motivo, se recusar" aria-label="Motivo da recusa"><button type="button" class="btn btn-sm btn-ghost" data-rec="${x.id}">Recusar</button></div>`;
     else if (x.status === 'solicitado') act = '<div class="mut">Aguardando o gerente aprovar.</div>';
-    if (x.status === 'aprovado' && papel('lider')) act = x.codigo && !x.codigo_usado && x.codigo_dia === iso(new Date())
+    if (x.status === 'aprovado' && opera()) act = x.codigo && !x.codigo_usado && x.codigo_dia === iso(new Date())
       ? `<div class="cod"><div><span class="mut">Código para o motorista · vale só hoje, só para ${esc(x.placa)}</span><b class="num">${esc(x.codigo)}</b></div><button type="button" class="btn btn-sm btn-ghost" data-copia="${esc(x.codigo)}">Copiar</button><button type="button" class="btn btn-sm btn-ghost" data-canc="${x.id}">Cancelar código</button></div>`
       : `<div class="ped-act"><button type="button" class="btn btn-sm btn-ghost" data-lib="${x.id}">AUTORIZAR MOTORISTA</button><button type="button" class="btn btn-sm btn-ghost" data-cancped="${x.id}">Cancelar pedido</button><span class="mut">O código vale só hoje, para um motorista fazer esta troca.</span></div>`;
-    if (x.status === 'realizado' && papel('lider') && t) act = `<div class="ped-act"><label for="cus-${t.id}" class="mut">Custo (R$)</label><input id="cus-${t.id}" inputmode="decimal" placeholder="0,00" class="num"><button type="button" class="btn btn-sm btn-main" data-cus="${t.id}">Lançar custo</button></div>`;
+    if (x.status === 'realizado' && opera() && t) act = `<div class="ped-act"><label for="cus-${t.id}" class="mut">Custo (R$)</label><input id="cus-${t.id}" inputmode="decimal" placeholder="0,00" class="num"><button type="button" class="btn btn-sm btn-main" data-cus="${t.id}">Lançar custo</button></div>`;
     else if (x.status === 'realizado') act = '<div class="mut">A líder de frota vai lançar o custo.</div>';
     const det = t ? `${dataBr(t.d)} · ${esc(curto(t.feito_por_nome))}${t.funcao && t.funcao !== 'Mecânico' ? ` (${esc(t.funcao)}${t.re ? ', RE ' + esc(t.re) : ''})` : ''} · ${esc(t.estabelecimento || '')} · ${esc(t.oleo || '')} · ${fmt(t.km)} km${t.requisicao ? ' · req. ' + esc(t.requisicao) : ''}${t.custo != null ? ' · ' + real(t.custo) : ''}`
       : x.status === 'recusado' ? `Recusado por ${esc(curto(pessoaNome(x.decidido_por)))}. Motivo: ${esc(x.motivo_recusa || 'não informado')}`
@@ -291,9 +293,9 @@ function renderOleo() {
   const hs = TR.slice().sort((a, b) => b.d - a.d).slice(0, 20);
   const fh = () => hs.map(h => `<tr><td class="num">${dataBr(h.d)}</td><td><b>${esc(h.placa)}</b><br><small class="mut">${esc(veic(h.placa).modelo || '')}</small></td><td>${esc(curto(h.feito_por_nome))}</td><td>${esc(h.estabelecimento || '—')}</td><td>${esc(h.oleo || '—')}</td><td class="r num">${h.km != null ? fmt(h.km) : '—'}</td><td>${h.filtro_oleo ? 'Óleo' : ''}${h.filtro_oleo && h.filtro_comb ? ' + ' : ''}${h.filtro_comb ? 'Comb.' : ''}${!h.filtro_oleo && !h.filtro_comb ? '—' : ''}</td><td>${h.fotos ? thumbs(h.fotos, h.placa) : '<span class="semfoto">—</span>'}</td><td class="r num">${h.custo != null ? real(h.custo) : '<span class="bad">pendente</span>'}</td></tr>`).join('');
   $('hist-o').innerHTML = fh(); pintarFotos(hs, $('hist-o'), fh);
-  $('papel-d').textContent = papel('lider') && papel('gerente') ? 'Você pode solicitar, aprovar e lançar custos.' : papel('lider') ? 'Você solicita trocas, autoriza motorista e lança o custo.' : papel('gerente') ? 'Você aprova ou recusa os pedidos.' : '';
+  $('papel-d').textContent = opera() && papel('gerente') ? 'Você pode solicitar, aprovar e lançar custos.' : opera() ? 'Você solicita trocas, autoriza motorista e lança o custo.' : papel('gerente') ? 'Você aprova ou recusa os pedidos.' : '';
   const cp = $('card-peds'), cs = $('card-sit');
-  if (papel('gerente') && !eu.papeis.includes('lider')) { if (cp.nextElementSibling !== cs) cs.before(cp); } else if (cs.nextElementSibling !== cp) cp.before(cs);
+  if (papel('gerente') && !eu.papeis.includes('lider') && !eu.papeis.includes('assistente')) { if (cp.nextElementSibling !== cs) cs.before(cp); } else if (cs.nextElementSibling !== cp) cp.before(cs);
 }
 $('tab-oleo').addEventListener('click', async e => {
   const d = e.target.dataset; if (!d) return;
@@ -312,7 +314,7 @@ $('tab-oleo').addEventListener('click', async e => {
 });
 
 // ================= CADASTROS =================
-const PAPEIS = [['porteiro', 'Porteiro (abastecimento)'], ['mecanico', 'Mecânico (troca de óleo)'], ['motorista', 'Motorista'], ['lider', 'Líder de frota'], ['gerente', 'Gerente'], ['admin', 'Administrador']];
+const PAPEIS = [['porteiro', 'Porteiro (abastecimento)'], ['mecanico', 'Mecânico (troca de óleo)'], ['motorista', 'Motorista'], ['lider', 'Líder de frota'], ['assistente', 'Assistente da líder (sem cadastros)'], ['gerente', 'Gerente'], ['admin', 'Administrador']];
 const NOME_PAPEL = Object.fromEntries(PAPEIS);
 $('p-papeis').innerHTML = PAPEIS.map(([k, n]) => `<label><input type="checkbox" value="${k}">${n}</label>`).join('');
 function renderCad() {
