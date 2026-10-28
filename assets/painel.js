@@ -77,7 +77,7 @@ async function carregarTudo() {
       tudo('veiculos', 'placa'), tudo('pessoas', 'nome', true, COLS_PESSOAS), tudo('abastecimentos', 'registrado_em'),
       tudo('pedidos_troca', 'id'), tudo('trocas_oleo', 'data'), tudo('listas', 'ordem')]);
   } catch (e) { $('note').textContent = 'Não consegui carregar os dados: ' + e.message; return; }
-  AB.forEach(r => { r.t = new Date(r.registrado_em); r.l = Number(r.litros); });
+  AB.forEach(r => { r.t = new Date(r.registrado_em); r.l = r.litros == null ? 0 : Number(r.litros); });
   TR.forEach(r => { r.d = new Date(r.data); });
   analisar(); montarFiltros(); pintaDatas(); render(); renderOleo(); if (papel('lider')) renderCad();
 }
@@ -118,6 +118,7 @@ function analisar() {
   AB.sort((a, b) => a.t - b.t);
   const porV = {}; AB.forEach(r => { (porV[r.placa] = porV[r.placa] || []).push(r); });
   Object.values(porV).forEach(g => {
+    g.forEach(r => { r.semL = r.litros == null; });
     g.forEach((r, i) => {
       r.sus = false; r.esp = null; r.rod = null;
       if (r.km == null) { r.sus = true; return; }
@@ -127,8 +128,9 @@ function analisar() {
       if (prev && next) { if (offP && offN && !(Math.abs(next.km - prev.km) > LIMITE)) { r.sus = true; r.esp = prev.km; } }
       else if (prev && offP) { r.sus = true; r.esp = prev.km; }
     });
+    g.forEach(r => { if (r.semL) r.sus = true; });
     let last = null;
-    g.forEach(r => { if (r.sus) return; if (last != null && r.km > last && r.km - last <= LIMITE) r.rod = r.km - last; last = r.km; });
+    g.forEach(r => { if (r.sus || r.km == null) return; if (last != null && r.km > last && r.km - last <= LIMITE) r.rod = r.km - last; last = r.km; });
   });
 }
 const tipoV = pl => { const v = veic(pl); return v.tipo || v.modelo || '—'; };
@@ -210,7 +212,7 @@ function render() {
   const fu = () => ult.map(linhaU).join('') || '<tr><td colspan="7" class="empty">Nenhum abastecimento neste filtro.</td></tr>';
   $('ult').innerHTML = fu(); pintarFotos(ult, $('ult'), fu);
   const rv = f.filter(x => x.sus).sort((a, b) => b.t - a.t);
-  const fr = () => rv.length ? rv.map(x => `<tr><td class="num">${fdt(x.t)}</td><td>${esc(x.placa)}</td><td>${esc(curto(pessoaNome(x.motorista_id)))}</td><td>${esc(curto(pessoaNome(x.porteiro_id)))}</td><td class="r num">${fmt(x.l, 1)}</td><td class="r num"><span class="bad">${fmt(x.km)}</span></td><td class="r num">${x.esp != null ? '≈ ' + fmt(x.esp) : '—'}</td><td>${thumbs(x.fotos, x.placa + ' · ' + fdt(x.t))}</td>${papel('lider') ? `<td><div class="ed-km"><input id="ck-${x.id}" class="num" inputmode="numeric" placeholder="km certo" aria-label="Km correto"><button type="button" class="btn btn-sm btn-ghost" data-corr="${x.id}">Salvar</button></div></td>` : ''}</tr>`).join('') : `<tr><td colspan="9" class="empty">Nenhum registro para revisar neste filtro.</td></tr>`;
+  const fr = () => rv.length ? rv.map(x => `<tr><td class="num">${fdt(x.t)}</td><td>${esc(x.placa)}</td><td>${esc(curto(pessoaNome(x.motorista_id)))}</td><td>${esc(curto(pessoaNome(x.porteiro_id)))}</td><td class="r num">${x.semL ? `<span class="bad">${x.litros_original != null ? fmt(x.litros_original, 1) + ' ?' : '—'}</span>` : fmt(x.l, 1)}</td><td class="r num">${x.semL && x.esp == null ? fmt(x.km) : `<span class="bad">${fmt(x.km)}</span>`}</td><td class="r num">${x.esp != null ? '≈ ' + fmt(x.esp) : '—'}</td><td>${thumbs(x.fotos, x.placa + ' · ' + fdt(x.t))}</td>${papel('lider') ? `<td><div class="ed-km"><input id="ck-${x.id}" class="num" inputmode="numeric" placeholder="km certo" aria-label="Km correto"><button type="button" class="btn btn-sm btn-ghost" data-corr="${x.id}">Salvar</button></div></td>` : ''}</tr>`).join('') : `<tr><td colspan="9" class="empty">Nenhum registro para revisar neste filtro.</td></tr>`;
   $('rev').innerHTML = fr(); pintarFotos(rv, $('rev'), fr);
 }
 $('rev').addEventListener('click', async e => {

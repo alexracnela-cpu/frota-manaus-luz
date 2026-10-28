@@ -8,7 +8,7 @@
 const $ = id => document.getElementById(id);
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
 const real = n => n == null ? '—' : Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const fdt = t => { t = new Date(t); return t.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+const fdt = t => { t = new Date(t); const o = { day: '2-digit', month: '2-digit' }; if (t.getFullYear() !== new Date().getFullYear()) o.year = '2-digit'; return t.toLocaleDateString('pt-BR', o) + ' ' + t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
 const dataBr = t => new Date(t).toLocaleDateString('pt-BR');
 const curto = n => { if (!n) return '—'; const a = n.trim().split(/\s+/).map(w => w[0] + w.slice(1).toLowerCase()); return a.length > 1 ? a[0] + ' ' + a[a.length - 1] : a[0]; };
 const ini = n => { const a = (n || '?').trim().split(/\s+/); return (a[0][0] + (a.length > 1 ? a[a.length - 1][0] : '')).toUpperCase(); };
