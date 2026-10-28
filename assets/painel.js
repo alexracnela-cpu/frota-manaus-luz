@@ -64,7 +64,7 @@ async function entrarPainel() {
   $('user-nome').textContent = curto(eu.nome); $('user-top').hidden = false;
   $('tab-btn-cad').hidden = !cadastra();
   $('th-corr').hidden = !opera();
-  mostrar('painel'); await carregarTudo();
+  mostrar('painel'); await carregarTudo(); verUsoFotos();
 }
 
 // busca todas as linhas de uma tabela (o Supabase entrega no máximo 1000 por vez)
@@ -86,10 +86,10 @@ async function carregarTudo() {
   } catch (e) { $('note').textContent = 'Não consegui carregar os dados: ' + e.message; return; }
   AB.forEach(r => { r.t = new Date(r.registrado_em); r.l = r.litros == null ? 0 : Number(r.litros); });
   TR.forEach(r => { r.d = new Date(r.data); });
-  analisar(); montarFiltros(); pintaDatas(); render(); renderOleo(); if (cadastra()) renderCad();
+  analisar(); montarFiltros(); pintaDatas(); render(); renderOleo(); if (cadastra()) { renderCad(); renderFotos(); }
 }
 // recarrega os dados a cada 2 minutos, para ver o que a portaria lançou
-setInterval(() => { if (eu && document.visibilityState === 'visible' && !document.querySelector('.form-cad:not([hidden])')) carregarTudo(); }, 120000);
+setInterval(() => { if (eu && document.visibilityState === 'visible' && !ocupadoFotos && !document.querySelector('.form-cad:not([hidden])')) carregarTudo(); }, 120000);
 
 // ================= ABAS =================
 $('tabs').addEventListener('click', e => {
@@ -107,6 +107,7 @@ async function assinar(caminhos) {
   (data || []).forEach(x => { if (x.signedUrl) urlCache[x.path] = x.signedUrl; });
 }
 const NF = { painel: 'Painel (km)', placa: 'Placa', bomba: 'Visor da bomba', adesivo: 'Adesivo da troca' };
+function thumbsR(r, leg, vazio = 'Sem foto') { return r.fotos ? thumbs(r.fotos, leg) : `<span class="semfoto">${r.fotos_arquivadas_em ? 'Arquivada' : vazio}</span>`; }
 function thumbs(fotos, legenda) {
   if (!fotos) return '<span class="semfoto">Sem foto</span>';
   return '<div class="thumbs">' + Object.keys(fotos).map(k => { const u = urlCache[fotos[k]];
@@ -215,11 +216,11 @@ function render() {
   ranking('rk-m', agrupa(f, 'motorista_id'), mm, o => curto(pessoaNome(o.k)), o => `${o.n} abast. · ${fmt(o.l / o.n, 1)} L em média`);
   grafico(f);
   const ult = f.slice().sort((a, b) => b.t - a.t).slice(0, 10);
-  const linhaU = x => `<tr><td class="num">${fdt(x.t)}</td><td>${esc(x.placa)}</td><td>${esc(curto(pessoaNome(x.motorista_id)))}</td><td>${esc(curto(pessoaNome(x.porteiro_id)))}</td><td class="r num">${fmt(x.l, 1)}</td><td class="r num">${x.sus ? `<span class="bad">${fmt(x.km)}</span>` : fmt(x.km)}${x.km_original != null ? ' <small class="mut">(corrigido)</small>' : ''}</td><td>${thumbs(x.fotos, x.placa + ' · ' + fdt(x.t))}</td></tr>`;
+  const linhaU = x => `<tr><td class="num">${fdt(x.t)}</td><td>${esc(x.placa)}</td><td>${esc(curto(pessoaNome(x.motorista_id)))}</td><td>${esc(curto(pessoaNome(x.porteiro_id)))}</td><td class="r num">${fmt(x.l, 1)}</td><td class="r num">${x.sus ? `<span class="bad">${fmt(x.km)}</span>` : fmt(x.km)}${x.km_original != null ? ' <small class="mut">(corrigido)</small>' : ''}</td><td>${thumbsR(x, x.placa + ' · ' + fdt(x.t))}</td></tr>`;
   const fu = () => ult.map(linhaU).join('') || '<tr><td colspan="7" class="empty">Nenhum abastecimento neste filtro.</td></tr>';
   $('ult').innerHTML = fu(); pintarFotos(ult, $('ult'), fu);
   const rv = f.filter(x => x.sus).sort((a, b) => b.t - a.t);
-  const fr = () => rv.length ? rv.map(x => `<tr><td class="num">${fdt(x.t)}</td><td>${esc(x.placa)}</td><td>${esc(curto(pessoaNome(x.motorista_id)))}</td><td>${esc(curto(pessoaNome(x.porteiro_id)))}</td><td class="r num">${x.semL ? `<span class="bad">${x.litros_original != null ? fmt(x.litros_original, 1) + ' ?' : '—'}</span>` : fmt(x.l, 1)}</td><td class="r num">${x.semL && x.esp == null ? fmt(x.km) : `<span class="bad">${fmt(x.km)}</span>`}</td><td class="r num">${x.esp != null ? '≈ ' + fmt(x.esp) : '—'}</td><td>${thumbs(x.fotos, x.placa + ' · ' + fdt(x.t))}</td>${opera() ? `<td><div class="ed-km"><input id="ck-${x.id}" class="num" inputmode="numeric" placeholder="km certo" aria-label="Km correto"><button type="button" class="btn btn-sm btn-ghost" data-corr="${x.id}">Salvar</button></div></td>` : ''}</tr>`).join('') : `<tr><td colspan="9" class="empty">Nenhum registro para revisar neste filtro.</td></tr>`;
+  const fr = () => rv.length ? rv.map(x => `<tr><td class="num">${fdt(x.t)}</td><td>${esc(x.placa)}</td><td>${esc(curto(pessoaNome(x.motorista_id)))}</td><td>${esc(curto(pessoaNome(x.porteiro_id)))}</td><td class="r num">${x.semL ? `<span class="bad">${x.litros_original != null ? fmt(x.litros_original, 1) + ' ?' : '—'}</span>` : fmt(x.l, 1)}</td><td class="r num">${x.semL && x.esp == null ? fmt(x.km) : `<span class="bad">${fmt(x.km)}</span>`}</td><td class="r num">${x.esp != null ? '≈ ' + fmt(x.esp) : '—'}</td><td>${thumbsR(x, x.placa + ' · ' + fdt(x.t))}</td>${opera() ? `<td><div class="ed-km"><input id="ck-${x.id}" class="num" inputmode="numeric" placeholder="km certo" aria-label="Km correto"><button type="button" class="btn btn-sm btn-ghost" data-corr="${x.id}">Salvar</button></div></td>` : ''}</tr>`).join('') : `<tr><td colspan="9" class="empty">Nenhum registro para revisar neste filtro.</td></tr>`;
   $('rev').innerHTML = fr(); pintarFotos(rv, $('rev'), fr);
 }
 $('rev').addEventListener('click', async e => {
@@ -296,7 +297,7 @@ function renderOleo() {
   $('peds').innerHTML = fp(); pintarFotos(ps.map(trocaDoPedido).filter(Boolean), $('peds'), fp);
 
   const hs = TR.slice().sort((a, b) => b.d - a.d).slice(0, 20);
-  const fh = () => hs.map(h => `<tr><td class="num">${dataBr(h.d)}</td><td><b>${esc(h.placa)}</b><br><small class="mut">${esc(veic(h.placa).modelo || '')}</small></td><td>${esc(curto(h.feito_por_nome))}</td><td>${esc(h.estabelecimento || '—')}</td><td>${esc(h.oleo || '—')}</td><td class="r num">${h.km != null ? fmt(h.km) : '—'}</td><td>${h.filtro_oleo ? 'Óleo' : ''}${h.filtro_oleo && h.filtro_comb ? ' + ' : ''}${h.filtro_comb ? 'Comb.' : ''}${!h.filtro_oleo && !h.filtro_comb ? '—' : ''}</td><td>${h.fotos ? thumbs(h.fotos, h.placa) : '<span class="semfoto">—</span>'}</td><td class="r num">${h.custo != null ? real(h.custo) : '<span class="bad">pendente</span>'}</td></tr>`).join('');
+  const fh = () => hs.map(h => `<tr><td class="num">${dataBr(h.d)}</td><td><b>${esc(h.placa)}</b><br><small class="mut">${esc(veic(h.placa).modelo || '')}</small></td><td>${esc(curto(h.feito_por_nome))}</td><td>${esc(h.estabelecimento || '—')}</td><td>${esc(h.oleo || '—')}</td><td class="r num">${h.km != null ? fmt(h.km) : '—'}</td><td>${h.filtro_oleo ? 'Óleo' : ''}${h.filtro_oleo && h.filtro_comb ? ' + ' : ''}${h.filtro_comb ? 'Comb.' : ''}${!h.filtro_oleo && !h.filtro_comb ? '—' : ''}</td><td>${thumbsR(h, h.placa, '—')}</td><td class="r num">${h.custo != null ? real(h.custo) : '<span class="bad">pendente</span>'}</td></tr>`).join('');
   $('hist-o').innerHTML = fh(); pintarFotos(hs, $('hist-o'), fh);
   $('papel-d').textContent = opera() && papel('gerente') ? 'Você pode solicitar, aprovar e lançar custos.' : opera() ? 'Você solicita trocas, autoriza motorista e lança o custo.' : papel('gerente') ? 'Você aprova ou recusa os pedidos.' : '';
   const cp = $('card-peds'), cs = $('card-sit');
@@ -376,6 +377,110 @@ $('listas').addEventListener('click', async e => {
     else return;
     LI = await tudo('listas', 'ordem'); renderCad();
   } catch (err) { toast(err.message, true); }
+});
+
+
+// ================= FOTOS: ESPAÇO E ARQUIVAMENTO =================
+const LIMITE_FOTOS = 1024 * 1024 * 1024;   // 1 GB do plano gratuito
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const nomeMes = m => { const [a, b] = m.split('-'); return `${MESES[+b - 1]}/${a}`; };
+const tam = b => b >= 1073741824 ? fmt(b / 1073741824, 2) + ' GB' : b >= 1048576 ? fmt(b / 1048576, 0) + ' MB' : fmt(b / 1024, 0) + ' KB';
+const baixados = new Map();   // mês -> registros do .zip baixado nesta sessão
+let confirmando = null, ocupadoFotos = false;
+
+async function verUsoFotos() {
+  if (!cadastra()) return;
+  let u; try { u = await rpc('painel_uso_fotos'); } catch (_) { return; }
+  const pct = u.bytes / LIMITE_FOTOS * 100, barra = $('uso-barra');
+  if (barra) { barra.style.width = Math.min(100, pct).toFixed(1) + '%'; barra.className = pct >= 95 ? 'critico' : pct >= 80 ? 'alto' : ''; }
+  if ($('uso-txt')) $('uso-txt').textContent = `${tam(u.bytes)} de 1 GB (${fmt(pct, 0)}%) · ${fmt(u.fotos)} fotos`;
+  const av = $('aviso-fotos');
+  if (pct >= 80) {
+    av.hidden = false;
+    av.innerHTML = `<span><strong>${pct >= 95 ? 'Espaço das fotos quase acabando' : 'Espaço das fotos passando de 80%'}:</strong> ${tam(u.bytes)} de 1 GB (${fmt(pct, 0)}%). ${pct >= 95 ? 'Quando encher, os registros novos não vão conseguir enviar fotos.' : ''} Baixe e exclua as fotos dos meses mais antigos.</span><button type="button" class="btn btn-sm btn-main" id="ir-fotos">Ver fotos</button>`;
+    $('ir-fotos').onclick = () => { document.querySelector('#tabs [data-t=cad]').click(); $('card-fotos').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  } else av.hidden = true;
+}
+
+async function renderFotos() {
+  let d; try { d = await rpc('painel_fotos_meses'); } catch (e) { $('t-fotos').innerHTML = `<tr><td colspan="4" class="empty">${esc(e.message)}</td></tr>`; return; }
+  const atual = iso(new Date()).slice(0, 7);
+  $('t-fotos').innerHTML = d.com_fotos.length ? d.com_fotos.map(m => {
+    const mes = m.mes.slice(0, 7), ok = baixados.has(mes);
+    let acoes;
+    if (confirmando === mes) acoes = `<div class="confirma"><span>Excluir ${fmt(m.fotos)} fotos de ${nomeMes(mes)}? Não dá para desfazer.</span><button type="button" class="btn btn-sm btn-main" data-exc-sim="${mes}">Sim, excluir</button><button type="button" class="btn btn-sm btn-ghost" data-exc-nao="1">Cancelar</button></div>`;
+    else acoes = `<div class="acoes-mes"><button type="button" class="btn btn-sm ${ok ? 'btn-ghost' : 'btn-main'}" data-zip="${mes}">${ok ? 'Baixar de novo' : 'Baixar .zip'}</button>`
+      + (mes === atual ? '<span class="mut">mês atual</span>' : `<button type="button" class="btn btn-sm btn-ghost" data-exc="${mes}" ${ok ? '' : 'disabled title="Baixe o .zip antes de excluir"'}>Excluir fotos</button>`) + '</div>';
+    return `<tr><td><b>${nomeMes(mes)}</b></td><td class="r num">${fmt(m.fotos)}</td><td class="r num">${tam(m.bytes)}</td><td>${acoes}</td></tr>`;
+  }).join('') : '<tr><td colspan="4" class="empty">Nenhuma foto no banco ainda.</td></tr>';
+  $('arquivados').innerHTML = d.arquivados.length ? 'Meses já arquivados: ' + d.arquivados.map(a => `${nomeMes(a.mes.slice(0, 7))} (${fmt(a.registros)} registros, em ${dataBr(a.em)})`).join(' · ') : '';
+}
+
+async function baixarZip(mes, btn) {
+  const txt = btn.textContent; btn.disabled = true; ocupadoFotos = true;
+  try {
+    btn.textContent = 'Buscando…';
+    const regs = await rpc('painel_fotos_do_mes', { p_mes: mes + '-01' });
+    const itens = regs.flatMap(r => Object.entries(r.fotos).map(([k, cam]) => ({ r, k, cam })));
+    if (!itens.length) { toast('Esse mês não tem fotos.'); return; }
+    const urls = {};
+    for (let i = 0; i < itens.length; i += 100) {
+      const lote = itens.slice(i, i + 100).map(x => x.cam);
+      const { data } = await sb.storage.from('fotos').createSignedUrls(lote, 900);
+      (data || []).forEach(x => { if (x.signedUrl) urls[x.path] = x.signedUrl; });
+    }
+    const arquivos = [], falhas = [], linhas = ['tipo;data;hora;placa;foto;arquivo'];
+    let feitos = 0;
+    const p2 = n => String(n).padStart(2, '0');
+    async function pega(x) {
+      const d = new Date(x.r.data), dia = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`, hora = `${p2(d.getHours())}${p2(d.getMinutes())}`;
+      const pasta = x.r.tipo === 'troca' ? 'trocas-de-oleo' : 'abastecimentos';
+      const nome = `${pasta}/${dia}_${hora}_${x.r.placa}_${x.k}_${x.r.id}.jpg`;
+      try {
+        if (!urls[x.cam]) throw new Error('sem link');
+        const resp = await fetch(urls[x.cam]); if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        arquivos.push({ nome, dados: new Uint8Array(await resp.arrayBuffer()), data: d });
+        linhas.push([x.r.tipo === 'troca' ? 'Troca de óleo' : 'Abastecimento', dataBr(d), `${p2(d.getHours())}:${p2(d.getMinutes())}`, x.r.placa, NF[x.k] || x.k, nome].join(';'));
+      } catch (_) { falhas.push(x); }
+      feitos++; btn.textContent = `Baixando ${feitos}/${itens.length}…`;
+    }
+    for (let i = 0; i < itens.length; i += 6) await Promise.all(itens.slice(i, i + 6).map(pega));
+    arquivos.push({ nome: 'indice.csv', dados: new TextEncoder().encode('﻿' + linhas.join('\r\n')), data: new Date() });
+    const blob = criarZip(arquivos), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `fotos-frota-${mes}.zip`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    if (falhas.length) { baixados.delete(mes); toast(`${falhas.length} foto(s) não baixaram. Baixe de novo antes de excluir.`, true); }
+    else { baixados.set(mes, regs); toast(`Baixado: ${itens.length} fotos (${tam(blob.size)}). Confira o .zip antes de excluir.`); }
+  } catch (e) { toast(e.message, true); }
+  finally { ocupadoFotos = false; btn.disabled = false; btn.textContent = txt; renderFotos(); }
+}
+
+async function excluirMes(mes, btn) {
+  const regs = baixados.get(mes); if (!regs) { toast('Baixe o .zip antes de excluir.', true); return; }
+  btn.disabled = true; btn.textContent = 'Excluindo…'; ocupadoFotos = true;
+  try {
+    const todos = regs.flatMap(r => Object.values(r.fotos)), apagados = new Set();
+    for (let i = 0; i < todos.length; i += 100) {
+      const lote = todos.slice(i, i + 100);
+      const { data, error } = await sb.storage.from('fotos').remove(lote);
+      if (error) throw new Error(msgErro(error));
+      (data || []).forEach(o => apagados.add(o.name));
+    }
+    const ok = regs.filter(r => Object.values(r.fotos).every(c => apagados.has(c)));
+    await rpc('painel_marcar_arquivadas', { p_abast: ok.filter(r => r.tipo === 'abastecimento').map(r => r.id), p_trocas: ok.filter(r => r.tipo === 'troca').map(r => r.id) });
+    baixados.delete(mes); confirmando = null;
+    if (ok.length < regs.length) toast(`Excluídas as fotos de ${ok.length} de ${regs.length} registros. Tente de novo para o restante.`, true);
+    else toast(`Fotos de ${nomeMes(mes)} excluídas. Os registros continuam no painel.`);
+    ocupadoFotos = false; await carregarTudo(); verUsoFotos();
+  } catch (e) { ocupadoFotos = false; toast(e.message, true); btn.disabled = false; btn.textContent = 'Sim, excluir'; }
+}
+
+$('t-fotos').addEventListener('click', e => {
+  const d = e.target.dataset;
+  if (d.zip) baixarZip(d.zip, e.target);
+  else if (d.exc) { confirmando = d.exc; renderFotos(); }
+  else if (d.excNao) { confirmando = null; renderFotos(); }
+  else if (d.excSim) excluirMes(d.excSim, e.target);
 });
 
 iniciar();

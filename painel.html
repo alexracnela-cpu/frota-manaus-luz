@@ -33,6 +33,14 @@
   .toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--ink-fg);padding:12px 18px;border-radius:10px;z-index:60;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25)}
   .toast.erro{background:var(--warn)}
   .ed-km{display:flex;gap:6px;align-items:center}
+  .medidor{display:grid;gap:6px}
+  .medidor-barra{height:14px;background:var(--sunk);border-radius:7px;overflow:hidden}
+  .medidor-barra div{height:100%;width:0;background:var(--accent);border-radius:7px;transition:width .4s}
+  .medidor-barra div.alto{background:var(--amb)} .medidor-barra div.critico{background:var(--warn)}
+  .medidor-txt{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums}
+  .aviso-fotos{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .acoes-mes{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+  .confirma{background:var(--warn-soft);border-radius:8px;padding:8px 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
   .ed-km input{width:110px;padding:5px 8px;border-radius:6px;border:1.5px solid var(--line);background:var(--surface)}
 </style>
 </head>
@@ -73,6 +81,7 @@
 
   <!-- painel -->
   <section id="v-painel" class="dash" hidden>
+    <div class="alert aviso-fotos" id="aviso-fotos" hidden role="status"></div>
     <div class="tabs" id="tabs" role="group" aria-label="Escolher módulo">
       <button type="button" data-t="ab" aria-pressed="true"><span class="tab-l" id="tl-ab">Abastecimento</span></button>
       <button type="button" data-t="oleo" aria-pressed="false"><span class="tab-l" id="tl-ol">Troca de óleo</span></button>
@@ -189,6 +198,15 @@
           <div class="card-h"><h2>Listas do formulário</h2></div>
           <div id="listas"></div>
         </div>
+        <div class="card" id="card-fotos">
+          <div class="card-h"><h2>Fotos</h2><span class="sub">Plano gratuito: 1 GB</span></div>
+          <div class="medidor"><div class="medidor-barra"><div id="uso-barra"></div></div><div class="medidor-txt" id="uso-txt">Calculando…</div></div>
+          <p class="mut" style="margin:10px 0">Para liberar espaço: baixe o .zip do mês, confira no seu computador e depois exclua as fotos daquele mês. Os registros continuam no painel.</p>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>Mês</th><th class="r">Fotos</th><th class="r">Tamanho</th><th></th></tr></thead>
+            <tbody id="t-fotos"></tbody></table></div>
+          <div id="arquivados" class="mut" style="margin-top:10px"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -197,6 +215,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="assets/config.js"></script>
 <script src="assets/comum.js"></script>
+<script src="assets/zip.js"></script>
 <script src="assets/painel.js"></script>
 </body>
 </html>
