@@ -41,7 +41,7 @@
   <div class="top-in">
     <div class="brand"><span class="selo" aria-hidden="true"></span><img class="logo" src="assets/logo-branco.png" alt="Manaus Luz"><div><h1>Frota Manaus Luz</h1><small>Painel de abastecimento e troca de óleo</small></div></div>
     <div class="acts">
-      <div class="user-top" id="user-top" hidden><span>Olá, <b id="user-nome"></b></span><button class="tema" type="button" id="sair">Sair</button></div>
+      <div class="user-top" id="user-top" hidden><span>Olá, <b id="user-nome"></b></span><button class="tema" type="button" id="trocar-senha">Trocar senha</button><button class="tema" type="button" id="sair">Sair</button></div>
       <button class="tema" id="tema" type="button" aria-label="Alternar modo claro e escuro"></button>
     </div>
   </div>
@@ -63,7 +63,9 @@
     <form class="login-box" id="f-nova" novalidate hidden>
       <h2>Criar nova senha</h2>
       <div class="field"><label for="n-senha">Nova senha (mínimo 8 caracteres)</label><input id="n-senha" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="n-senha2">Repita a nova senha</label><input id="n-senha2" type="password" autocomplete="new-password"></div>
       <button class="btn btn-main" type="submit">Salvar senha</button>
+      <button class="linkbtn" type="button" id="n-cancelar" hidden>Cancelar</button>
       <p class="msg" id="n-msg" role="alert"></p>
     </form>
     <div class="login-box" id="sem-config" hidden><h2>Falta configurar</h2><p class="msg">Abra o arquivo <b>assets/config.js</b> e cole a Project URL e a chave pública do Supabase.</p></div>

@@ -43,10 +43,15 @@ $('esqueci').onclick = async () => {
 $('f-nova').addEventListener('submit', async e => {
   e.preventDefault(); const s = $('n-senha').value;
   if (s.length < 8) { $('n-msg').className = 'msg erro'; $('n-msg').textContent = 'Use pelo menos 8 caracteres.'; return; }
+  if (s !== $('n-senha2').value) { $('n-msg').className = 'msg erro'; $('n-msg').textContent = 'As duas senhas estão diferentes.'; return; }
   const { error } = await sb.auth.updateUser({ password: s });
   if (error) { $('n-msg').className = 'msg erro'; $('n-msg').textContent = msgErro(error); return; }
-  $('f-nova').hidden = true; $('f-login').hidden = false; history.replaceState(null, '', location.pathname); await entrarPainel();
+  $('f-nova').reset(); $('n-msg').textContent = ''; $('f-nova').hidden = true; $('f-login').hidden = false; history.replaceState(null, '', location.pathname);
+  await entrarPainel(); toast('Senha alterada.');
 });
+// trocar a própria senha estando logado
+$('trocar-senha').onclick = () => { $('f-nova').reset(); $('n-msg').textContent = ''; mostrar('login'); $('f-login').hidden = true; $('sem-config').hidden = true; $('f-nova').hidden = false; $('n-cancelar').hidden = false; $('n-senha').focus(); };
+$('n-cancelar').onclick = () => { $('f-nova').hidden = true; $('f-login').hidden = false; $('n-cancelar').hidden = true; mostrar('painel'); };
 $('sair').onclick = async () => { await sb.auth.signOut(); eu = null; $('user-top').hidden = true; mostrar('login'); };
 
 async function entrarPainel() {
