@@ -6,7 +6,7 @@
 <title>FLEET · Painel da Frota · Manaus Luz</title>
 <link rel="icon" href="assets/icone-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/estilo.css">
+<link rel="stylesheet" href="assets/estilo.css?v=3">
 <style>
   .user-top{display:flex;align-items:center;gap:10px;color:var(--ink-fg);font-size:14px}
   .user-top b{font-weight:600}
@@ -26,6 +26,11 @@
   .cad-grid td,.cad-grid th{padding:7px 6px}
   .papeis label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
   .linha-btn{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .re-linha{display:flex;gap:6px}.re-linha input{flex:1;min-width:0}
+  .aut{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;background:var(--accent-soft);border-radius:10px;padding:10px 12px}
+  .aut b{color:var(--accent)}
+  .card-h .bad,td .bad{color:var(--warn);font-weight:600;white-space:nowrap}
+  .ped-act select{padding:7px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);font-size:14px;max-width:280px}
   tr.inativo td{opacity:.5}
   .chips-lista{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .chips-lista span{display:inline-flex;align-items:center;gap:6px;background:var(--sunk);border-radius:999px;padding:4px 6px 4px 12px;font-size:13px}
@@ -183,15 +188,16 @@
     <div class="tab" id="tab-cad" hidden>
       <div class="cad-grid">
         <div class="card">
-          <div class="card-h"><h2>Pessoas</h2><button type="button" class="btn btn-sm btn-main" id="nova-pessoa">Nova pessoa</button></div>
+          <div class="card-h"><h2>Pessoas</h2><span class="sub" id="pes-sub"></span><button type="button" class="btn btn-sm btn-main" id="nova-pessoa">Nova pessoa</button></div>
           <form class="form-cad" id="f-pessoa" hidden novalidate>
             <input type="hidden" id="p-id">
-            <div class="two"><div class="field"><label for="p-nome">Nome completo</label><input id="p-nome"></div><div class="field"><label for="p-re">RE</label><input id="p-re" class="num"></div></div>
+            <div class="two"><div class="field"><label for="p-nome">Nome completo</label><input id="p-nome"></div><div class="field"><label for="p-re">RE (é o login do celular)</label><div class="re-linha"><input id="p-re" class="num" inputmode="numeric" autocomplete="off"><button class="btn btn-sm btn-ghost" type="button" id="p-gerar" title="Para quem não tem RE da empresa">Gerar código</button></div></div></div>
             <div class="two"><div class="field"><label for="p-funcao">Função</label><input id="p-funcao" placeholder="Ex.: Motorista"></div><div class="field"><label for="p-email">E-mail (só para quem usa o painel)</label><input id="p-email" type="email"></div></div>
             <div class="field"><label>Acessos</label><div class="papeis" id="p-papeis"></div></div>
             <div class="papeis"><label><input type="checkbox" id="p-ativo" checked>Ativo</label></div>
             <div class="linha-btn"><button class="btn btn-sm btn-main" type="submit">Salvar</button><button class="btn btn-sm btn-ghost" type="button" id="p-cancelar">Cancelar</button></div>
-            <div class="linha-btn" id="p-pin-box"><label for="p-pin" class="mut">PIN do celular (4 números)</label><input id="p-pin" class="num" inputmode="numeric" maxlength="4" style="width:90px;padding:6px 8px;border-radius:6px;border:1.5px solid var(--line);background:var(--surface)"><button class="btn btn-sm btn-ghost" type="button" id="p-pin-salvar">Definir PIN</button></div>
+            <div class="linha-btn" id="p-pin-box"><span class="mut">PIN do celular:</span><span id="p-pin-sit"></span><button class="btn btn-sm btn-ghost" type="button" id="p-pin-zerar">Zerar PIN</button><span class="mut">A própria pessoa cria o PIN no primeiro acesso, com o RE.</span></div>
+            <div class="confirma" id="p-zerar-conf" hidden><span>Zerar o PIN? No próximo acesso a pessoa confirma o nome e cria um PIN novo.</span><button type="button" class="btn btn-sm btn-main" id="p-zerar-sim">Sim, zerar</button><button type="button" class="btn btn-sm btn-ghost" id="p-zerar-nao">Cancelar</button></div>
             <p class="msg" id="p-msg" role="alert"></p>
           </form>
           <div class="tbl-wrap"><table>
@@ -231,8 +237,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="assets/config.js"></script>
-<script src="assets/comum.js"></script>
+<script src="assets/comum.js?v=3"></script>
 <script src="assets/zip.js"></script>
-<script src="assets/painel.js"></script>
+<script src="assets/painel.js?v=3"></script>
 </body>
 </html>
