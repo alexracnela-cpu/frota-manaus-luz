@@ -242,14 +242,17 @@ function situacao(v) {
   if (v.garantia) return { o: 5, cls: 'gar', txt: 'Garantia', det: 'Revisão na concessionária' };
   const ut = ultimaTroca(v.placa);
   if (!ut) return { o: 4, cls: 'cinza', txt: 'Sem histórico', det: 'Nenhuma troca registrada' };
-  const int = v.intervalo_km || 5000; let km = kmAtual(v.placa), susp = false;
+  // próxima troca = KM ÓLEO informado (adesivo); sem ele, km da troca + intervalo do veículo
+  const int = v.intervalo_km || 5000;
+  const prox = ut.km_proxima != null ? ut.km_proxima : (ut.km != null ? ut.km + int : null);
+  let km = kmAtual(v.placa), susp = false;
   if (km != null && ut.km != null && km - ut.km > 3 * int) { susp = true; km = null; }
-  const falta = (km != null && ut.km != null) ? ut.km + int - km : null;
-  const dias = Math.floor((Date.now() - ut.d) / 864e5), restD = 182 - dias, aviso = Math.min(1000, int * .2);
-  const r = { km, falta, dias, restD, susp, ut, prox: ut.km != null ? ut.km + int : null };
-  if ((falta != null && falta <= 0) || restD <= 0) return { ...r, o: 0, cls: 'venc', txt: 'Vencida', det: falta != null && falta <= 0 ? `passou ${fmt(-falta)} km` : `${Math.floor(dias / 30)} meses sem troca` };
-  if ((falta != null && falta <= aviso) || restD <= 15) return { ...r, o: 1, cls: 'prox', txt: 'Próxima', det: falta != null && falta <= aviso ? `faltam ${fmt(falta)} km` : `vence por tempo em ${restD} dias` };
-  return { ...r, o: 2, cls: 'ok', txt: 'Em dia', det: falta != null ? `faltam ${fmt(falta)} km` : `${restD} dias até o limite de 6 meses` };
+  const falta = (km != null && prox != null) ? prox - km : null;
+  const r = { km, falta, susp, ut, prox, estimada: ut.km_proxima == null };
+  if (falta == null) return { ...r, o: 3, cls: 'cinza', txt: 'Sem km', det: susp ? 'km atual fora do padrão' : 'km não informado' };
+  if (falta <= 0) return { ...r, o: 0, cls: 'venc', txt: 'Vencida', det: `passou ${fmt(-falta)} km` };
+  if (falta < 1000) return { ...r, o: 1, cls: 'prox', txt: 'Próxima', det: `faltam ${fmt(falta)} km` };
+  return { ...r, o: 2, cls: 'ok', txt: 'Em dia', det: `faltam ${fmt(falta)} km` };
 }
 const pedidoAberto = pl => PD.find(x => x.placa === pl && ['solicitado', 'aprovado', 'realizado'].includes(x.status));
 const trocaDoPedido = id => TR.find(t => t.pedido_id === id);
@@ -269,15 +272,15 @@ function renderOleo() {
   const aguard = PD.filter(x => x.status === 'solicitado').length, cpend = TR.filter(t => t.origem === 'app' && t.custo == null).length;
   const doAno = TR.filter(t => t.d.getFullYear() === ano), gasto = doAno.reduce((s, t) => s + Number(t.custo || 0), 0);
   $('kpis-o').innerHTML = `
-    <div class="kpi ${venc ? 'flag' : ''}"><span class="l">Trocas vencidas</span><span class="v">${venc}</span><span class="s">por km ou por 6 meses</span></div>
-    <div class="kpi"><span class="l">Próximas</span><span class="v" style="color:var(--amb)">${prox}</span><span class="s">menos de 1.000 km ou 15 dias</span></div>
+    <div class="kpi ${venc ? 'flag' : ''}"><span class="l">Trocas vencidas</span><span class="v">${venc}</span><span class="s">km atual passou do km da próxima troca</span></div>
+    <div class="kpi"><span class="l">Próximas</span><span class="v" style="color:var(--amb)">${prox}</span><span class="s">faltam menos de 1.000 km</span></div>
     <div class="kpi"><span class="l">Aguardando aprovação</span><span class="v">${aguard}</span><span class="s">pedidos da líder de frota</span></div>
     <div class="kpi"><span class="l">Custo pendente</span><span class="v">${cpend}</span><span class="s">trocas feitas sem valor lançado</span></div>
     <div class="kpi"><span class="l">Gasto em ${ano}</span><span class="v" style="font-size:28px">${real(gasto)}</span><span class="s">${doAno.length} trocas no ano</span></div>`;
   $('sit').innerHTML = lista.map(({ v, s }) => { const pa = pedidoAberto(v.placa); let acao = '';
     if (pa) acao = `<span class="pill info">${{ solicitado: 'Aguardando aprovação', aprovado: 'Aprovado', realizado: 'Feito · custo pendente' }[pa.status]}</span>`;
     else if (opera() && !v.garantia) acao = `<button type="button" class="btn btn-sm ${s.o < 2 ? 'btn-main' : 'btn-ghost'}" data-sol="${esc(v.placa)}">Solicitar troca</button>`;
-    return `<tr><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || v.tipo || '')}</small></td><td>${esc(v.categoria)}</td><td class="num">${s.ut ? dataBr(s.ut.d) : '—'}<br><small class="mut">${s.ut && s.ut.km != null ? fmt(s.ut.km) + ' km' : s.ut ? 'km não informado' : ''}</small></td><td class="r num">${s.km != null ? fmt(s.km) : s.susp ? '<span class="bad">conferir</span>' : '—'}</td><td class="r num">${s.prox != null && !v.garantia ? fmt(s.prox) : '—'}</td><td><span class="pill ${s.cls}">${s.txt}</span><br><small class="mut">${s.det}</small></td><td class="r">${acao}</td></tr>`; }).join('');
+    return `<tr><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || v.tipo || '')}</small></td><td>${esc(v.categoria)}</td><td class="num">${s.ut ? dataBr(s.ut.d) : '—'}<br><small class="mut">${s.ut && s.ut.km != null ? fmt(s.ut.km) + ' km' : s.ut ? 'km não informado' : ''}</small></td><td class="r num">${s.km != null ? fmt(s.km) : s.susp ? '<span class="bad">conferir</span>' : '—'}</td><td class="r num">${s.prox != null && !v.garantia ? fmt(s.prox) + (s.estimada ? '<br><small class="mut" title="Sem KM ÓLEO informado: km da troca + intervalo">estimada</small>' : '') : '—'}</td><td><span class="pill ${s.cls}">${s.txt}</span><br><small class="mut">${s.det}</small></td><td class="r">${acao}</td></tr>`; }).join('');
 
   const ord = { solicitado: 0, realizado: 1, aprovado: 2, recusado: 3, fechado: 4, cancelado: 5 };
   const recentes = PD.filter(x => ['solicitado', 'aprovado', 'realizado'].includes(x.status) || (Date.now() - new Date(x.solicitado_em)) < 30 * 864e5);

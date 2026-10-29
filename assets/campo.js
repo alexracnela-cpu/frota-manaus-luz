@@ -186,7 +186,7 @@ function abrirFormOleo() {
   $('o-funcao').innerHTML = opcoes(dadosOl.funcoes, 'Escolha');
   $('lista-mot').innerHTML = (dadosOl.motoristas || []).map(n => `<option value="${esc(n)}">`).join('');
   $('o-quem').hidden = pessoa !== MOTORISTA;
-  $('o-veic').innerHTML = `<b>${esc(x.placa)}</b> · ${esc(x.modelo || '')}<br><small>Última troca: ${x.ultima_data ? dataBr(x.ultima_data) : '—'}${x.ultimo_km ? ` com ${fmt(x.ultimo_km)} km` : ''}${x.intervalo_km ? ` · intervalo de ${fmt(x.intervalo_km)} km` : ''}</small>`;
+  $('o-veic').innerHTML = `<b>${esc(x.placa)}</b> · ${esc(x.modelo || '')}<br><small>Última troca: ${x.ultima_data ? dataBr(x.ultima_data) : '—'}${x.ultimo_km ? ` com ${fmt(x.ultimo_km)} km` : ''}${x.ultimo_km_proxima ? ` · próxima prevista ${fmt(x.ultimo_km_proxima)} km` : ''}</small>`;
   $('o-kmhint').innerHTML = x.km_atual ? `Último km conhecido: <b class="num">${fmt(x.km_atual)}</b>` : '';
   $('o-agora').textContent = 'Data e hora: ' + new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) + ' (automático)';
   tela('s-oleo-form');
@@ -196,12 +196,14 @@ $('o-form').addEventListener('submit', async e => {
   e.preventDefault(); if (salvando) return;
   const x = pedidoSel, estab = $('o-estab').value, oleo = $('o-oleo').value;
   const km = parseInt($('o-km').value.replace(/\D/g, ''), 10), req = $('o-req').value.trim();
+  const kmp = parseInt($('o-kmp').value.replace(/\D/g, ''), 10);
   const fo = document.querySelector('input[name="o-fo"]:checked'), fc = document.querySelector('input[name="o-fc"]:checked');
   const nome = $('o-nome').value.trim(), re = $('o-re').value.trim(), funcao = $('o-funcao').value;
   if (pessoa === MOTORISTA && (nome.split(/\s+/).length < 2 || !re || !funcao)) return avisoO('<strong>Falta informação de quem levou.</strong> Preencha o nome completo, o RE e a função.');
   if (!estab || !oleo) return avisoO('<strong>Falta informação.</strong> Escolha o local e o óleo usado.');
   if (!(km > 0)) return avisoO('<strong>Km inválido.</strong> Digite o km do painel no momento da troca.');
   if (x.ultimo_km && km < x.ultimo_km) return avisoO(`<strong>Km menor que o da última troca</strong> (${fmt(x.ultimo_km)} km). Confira o número.`);
+  if (!(kmp > km)) return avisoO('<strong>Km da próxima troca inválido.</strong> Digite o km da próxima troca que está escrito no adesivo. Ele precisa ser maior que o km do painel.');
   if (!fo || !fc) return avisoO('<strong>Falta informação.</strong> Marque se trocou o filtro de óleo e o de combustível.');
   const falta = ['o-placa', 'o-adesivo'].filter(k => !fotos[k]);
   if (falta.length) { falta.forEach(k => document.querySelector(`.foto[data-f="${k}"]`).classList.add('falta')); return avisoO(`<strong>Faltam fotos:</strong> ${falta.map(k => NF[k]).join(', ')}. As 2 fotos são obrigatórias.`); }
@@ -209,11 +211,11 @@ $('o-form').addEventListener('submit', async e => {
   try {
     const caminhos = await enviarFotos(['o-placa', 'o-adesivo']);
     carregando(true, 'Registrando…');
-    const r = await rpc('campo_trocar', { p_token: token, p_pedido: x.id, p_estab: estab, p_oleo: oleo, p_km: km, p_requisicao: req,
+    const r = await rpc('campo_trocar', { p_token: token, p_pedido: x.id, p_estab: estab, p_oleo: oleo, p_km: km, p_km_proxima: kmp, p_requisicao: req,
       p_filtro_oleo: fo.value === 's', p_filtro_comb: fc.value === 's', p_fotos: caminhos,
       p_nome: pessoa === MOTORISTA ? nome : null, p_re: pessoa === MOTORISTA ? re : null, p_funcao: pessoa === MOTORISTA ? funcao : null });
     if (pessoa === MOTORISTA) token = null; // o código já foi usado
-    $('recibo').innerHTML = `<div><span>Veículo</span><b>${esc(x.placa)}</b></div>${pessoa === MOTORISTA ? `<div><span>Levado por</span><b>${esc(nome)} · ${esc(funcao)} · RE ${esc(re)}</b></div>` : ''}<div><span>Local</span><b>${esc(estab)}</b></div><div><span>Óleo</span><b>${esc(oleo)}</b></div><div><span>Km</span><b class="num">${fmt(km)}</b></div>${x.intervalo_km ? `<div><span>Próxima troca</span><b class="num">${fmt(r.proxima_km)} km</b></div>` : ''}`;
+    $('recibo').innerHTML = `<div><span>Veículo</span><b>${esc(x.placa)}</b></div>${pessoa === MOTORISTA ? `<div><span>Levado por</span><b>${esc(nome)} · ${esc(funcao)} · RE ${esc(re)}</b></div>` : ''}<div><span>Local</span><b>${esc(estab)}</b></div><div><span>Óleo</span><b>${esc(oleo)}</b></div><div><span>Km</span><b class="num">${fmt(km)}</b></div><div><span>Próxima troca</span><b class="num">${fmt(r.proxima_km)} km</b></div>`;
     $('novo').hidden = pessoa === MOTORISTA;
     tela('s-done'); contagem();
   } catch (err) { avisoO('<strong>Não foi registrado.</strong> ' + esc(err.message)); }
