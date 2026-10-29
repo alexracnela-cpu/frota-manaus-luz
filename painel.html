@@ -141,11 +141,20 @@
     <div class="tab" id="tab-oleo" hidden>
       <div class="filters">
         <div class="field"><label>Categoria</label><div class="chips" id="cat-o"><button class="chip" data-c="" aria-pressed="true">Todas</button><button class="chip" data-c="Pesado">Pesados</button><button class="chip" data-c="Leve">Leves</button><button class="chip" data-c="Moto">Motos</button></div></div>
+        <div class="field"><label>Período dos gastos</label>
+          <div class="chips" id="per-o">
+            <button class="chip" data-p="mes">Este mês</button>
+            <button class="chip" data-p="ano" aria-pressed="true">Este ano</button>
+            <button class="chip" data-p="12m">12 meses</button>
+            <button class="chip" data-p="all">Tudo</button>
+          </div></div>
+        <div class="field"><label for="dto-de">De</label><input type="date" id="dto-de"></div>
+        <div class="field"><label for="dto-ate">Até</label><input type="date" id="dto-ate"></div>
         <span class="mut" id="papel-d" style="padding-bottom:8px"></span>
       </div>
       <div class="kpis" id="kpis-o"></div>
       <div class="card" id="card-sit">
-        <div class="card-h"><h2>Situação da frota</h2><span class="sub">Km atual dos pesados vem dos abastecimentos. Limite de 6 meses entre trocas.</span></div>
+        <div class="card-h"><h2>Situação da frota</h2><span class="sub">Km atual dos pesados vem dos abastecimentos. Próxima troca pelo KM ÓLEO do adesivo.</span></div>
         <div class="tbl-wrap"><table>
           <thead><tr><th>Veículo</th><th>Categoria</th><th>Última troca</th><th class="r">Km atual</th><th class="r">Próxima em</th><th>Situação</th><th class="r">Ação</th></tr></thead>
           <tbody id="sit"></tbody></table></div>
@@ -155,7 +164,13 @@
         <div class="peds" id="peds"></div>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Histórico de trocas</h2><span class="sub">20 mais recentes, da planilha e do app</span></div>
+        <div class="card-h"><h2>Gastos por veículo</h2><span class="sub" id="gv-sub"></span></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Veículo</th><th>Categoria</th><th class="r">Trocas</th><th class="r">Sem custo</th><th class="r">Custo médio</th><th class="r">Total</th></tr></thead>
+          <tbody id="gv-o"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Histórico de trocas</h2><span class="sub" id="hist-sub">20 mais recentes, da planilha e do app</span></div>
         <div class="tbl-wrap"><table>
           <thead><tr><th>Data</th><th>Veículo</th><th>Feito por</th><th>Local</th><th>Óleo</th><th class="r">Km</th><th>Filtros</th><th>Fotos</th><th class="r">Custo</th></tr></thead>
           <tbody id="hist-o"></tbody></table></div>

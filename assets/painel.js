@@ -262,21 +262,42 @@ function passos(x) {
   if (x.status === 'cancelado') return '<div class="passos"><span class="ps feito">Solicitado</span><span class="ps rec">Cancelado</span></div>';
   const i = st.indexOf(x.status); return '<div class="passos">' + nomes.map((n, j) => `<span class="ps ${j <= i ? 'feito' : ''} ${j === i + 1 ? 'atual' : ''}">${n}</span>`).join('') + '</div>';
 }
+let perO = 'ano';
+function periodoO() {
+  if (perO === 'custom') { const [y1, m1, d1] = $('dto-de').value.split('-').map(Number), [y2, m2, d2] = $('dto-ate').value.split('-').map(Number); return [new Date(y1, m1 - 1, d1), new Date(y2, m2 - 1, d2, 23, 59, 59)]; }
+  const fim = new Date(); let ini;
+  if (perO === 'all') ini = TR.length ? new Date(Math.min(...TR.map(t => t.d))) : new Date(0);
+  else if (perO === 'mes') ini = new Date(fim.getFullYear(), fim.getMonth(), 1);
+  else if (perO === 'ano') ini = new Date(fim.getFullYear(), 0, 1);
+  else { ini = new Date(fim.getFullYear(), fim.getMonth() - 12, fim.getDate()); }
+  ini.setHours(0, 0, 0, 0); return [ini, fim];
+}
+function rotuloO() { const [a, b] = periodoO(); return perO === 'mes' ? 'este mês' : perO === 'ano' ? 'em ' + b.getFullYear() : perO === '12m' ? 'nos últimos 12 meses' : perO === 'all' ? 'em todo o histórico' : `de ${a.toLocaleDateString('pt-BR')} até ${b.toLocaleDateString('pt-BR')}`; }
+function pintaDatasO() { const [a, b] = periodoO(); $('dto-de').value = iso(a); $('dto-ate').value = iso(b); }
+$('per-o').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; perO = b.dataset.p; [...$('per-o').children].forEach(x => x.setAttribute('aria-pressed', x === b)); pintaDatasO(); renderOleo(); });
+['dto-de', 'dto-ate'].forEach(id => $(id).addEventListener('change', () => {
+  if (!$('dto-de').value || !$('dto-ate').value) return;
+  if ($('dto-de').value > $('dto-ate').value) { const t = $('dto-de').value; $('dto-de').value = $('dto-ate').value; $('dto-ate').value = t; }
+  perO = 'custom'; [...$('per-o').children].forEach(x => x.setAttribute('aria-pressed', 'false')); renderOleo();
+}));
 $('cat-o').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; catO = b.dataset.c; [...$('cat-o').children].forEach(x => x.setAttribute('aria-pressed', x === b)); renderOleo(); });
 function renderOleo() {
   if (!eu) return;
   const ativos = VE.filter(v => v.ativo);
   const lista = ativos.filter(v => !catO || v.categoria === catO).map(v => ({ v, s: situacao(v) })).sort((a, b) => a.s.o - b.s.o || (a.s.falta ?? 1e9) - (b.s.falta ?? 1e9));
-  const todos = ativos.map(situacao), ano = new Date().getFullYear();
+  const catOk = pl => !catO || veic(pl).categoria === catO;
+  const todos = ativos.filter(v => !catO || v.categoria === catO).map(situacao);
+  const [pa, pb] = periodoO(), noPer = TR.filter(t => t.d >= pa && t.d <= pb && catOk(t.placa));
+  if (!$('dto-de').value) pintaDatasO();
   const venc = todos.filter(s => s.cls === 'venc').length, prox = todos.filter(s => s.cls === 'prox').length;
-  const aguard = PD.filter(x => x.status === 'solicitado').length, cpend = TR.filter(t => t.origem === 'app' && t.custo == null).length;
-  const doAno = TR.filter(t => t.d.getFullYear() === ano), gasto = doAno.reduce((s, t) => s + Number(t.custo || 0), 0);
+  const aguard = PD.filter(x => x.status === 'solicitado' && catOk(x.placa)).length, cpend = TR.filter(t => t.origem === 'app' && t.custo == null && catOk(t.placa)).length;
+  const gasto = noPer.reduce((s, t) => s + Number(t.custo || 0), 0);
   $('kpis-o').innerHTML = `
     <div class="kpi ${venc ? 'flag' : ''}"><span class="l">Trocas vencidas</span><span class="v">${venc}</span><span class="s">km atual passou do km da próxima troca</span></div>
     <div class="kpi"><span class="l">Próximas</span><span class="v" style="color:var(--amb)">${prox}</span><span class="s">faltam menos de 1.000 km</span></div>
     <div class="kpi"><span class="l">Aguardando aprovação</span><span class="v">${aguard}</span><span class="s">pedidos da líder de frota</span></div>
     <div class="kpi"><span class="l">Custo pendente</span><span class="v">${cpend}</span><span class="s">trocas feitas sem valor lançado</span></div>
-    <div class="kpi"><span class="l">Gasto em ${ano}</span><span class="v" style="font-size:28px">${real(gasto)}</span><span class="s">${doAno.length} trocas no ano</span></div>`;
+    <div class="kpi"><span class="l">Gasto no período</span><span class="v" style="font-size:28px">${real(gasto)}</span><span class="s">${noPer.length} trocas ${rotuloO()}</span></div>`;
   $('sit').innerHTML = lista.map(({ v, s }) => { const pa = pedidoAberto(v.placa); let acao = '';
     if (pa) acao = `<span class="pill info">${{ solicitado: 'Aguardando aprovação', aprovado: 'Aprovado', realizado: 'Feito · custo pendente' }[pa.status]}</span>`;
     else if (opera() && !v.garantia) acao = `<button type="button" class="btn btn-sm ${s.o < 2 ? 'btn-main' : 'btn-ghost'}" data-sol="${esc(v.placa)}">Solicitar troca</button>`;
@@ -300,7 +321,13 @@ function renderOleo() {
     return `<div class="ped"><div class="ped-h"><div><b>${esc(x.placa)}</b> <span class="mut">${esc(v.modelo || v.tipo || '')}</span></div>${t && t.fotos ? thumbs(t.fotos, x.placa) : ''}</div>${passos(x)}<div class="mut ped-d">${det}</div>${act}</div>`; }).join('') || '<div class="empty">Nenhum pedido nos últimos 30 dias.</div>';
   $('peds').innerHTML = fp(); pintarFotos(ps.map(trocaDoPedido).filter(Boolean), $('peds'), fp);
 
-  const hs = TR.slice().sort((a, b) => b.d - a.d).slice(0, 20);
+  const gv = {}; noPer.forEach(t => { const g = gv[t.placa] = gv[t.placa] || { n: 0, sc: 0, tot: 0, nc: 0 }; g.n++; if (t.custo == null) g.sc++; else { g.tot += Number(t.custo); g.nc++; } });
+  const gl = Object.entries(gv).sort((a, b) => b[1].tot - a[1].tot);
+  $('gv-sub').textContent = `${gl.length} veículos com troca ${rotuloO()}${catO ? ' · ' + { Pesado: 'pesados', Leve: 'leves', Moto: 'motos' }[catO] : ''}`;
+  $('gv-o').innerHTML = gl.map(([pl, g]) => `<tr><td><b>${esc(pl)}</b><br><small class="mut">${esc(veic(pl).modelo || '')}</small></td><td>${esc(veic(pl).categoria || '')}</td><td class="r num">${g.n}</td><td class="r num">${g.sc ? `<span class="bad">${g.sc}</span>` : '—'}</td><td class="r num">${g.nc ? real(g.tot / g.nc) : '—'}</td><td class="r num"><b>${real(g.tot)}</b></td></tr>`).join('')
+    + (gl.length ? `<tr><td colspan="2"><b>Total</b></td><td class="r num"><b>${noPer.length}</b></td><td></td><td></td><td class="r num"><b>${real(gasto)}</b></td></tr>` : '<tr><td colspan="6" class="empty">Nenhuma troca neste período.</td></tr>');
+  const hs = noPer.slice().sort((a, b) => b.d - a.d).slice(0, 20);
+  $('hist-sub').textContent = `20 mais recentes ${rotuloO()}, da planilha e do app`;
   const fh = () => hs.map(h => `<tr><td class="num">${dataBr(h.d)}</td><td><b>${esc(h.placa)}</b><br><small class="mut">${esc(veic(h.placa).modelo || '')}</small></td><td>${esc(curto(h.feito_por_nome))}</td><td>${esc(h.estabelecimento || '—')}</td><td>${esc(h.oleo || '—')}</td><td class="r num">${h.km != null ? fmt(h.km) : '—'}</td><td>${h.filtro_oleo ? 'Óleo' : ''}${h.filtro_oleo && h.filtro_comb ? ' + ' : ''}${h.filtro_comb ? 'Comb.' : ''}${!h.filtro_oleo && !h.filtro_comb ? '—' : ''}</td><td>${thumbsR(h, h.placa, '—')}</td><td class="r num">${h.custo != null ? real(h.custo) : '<span class="bad">pendente</span>'}</td></tr>`).join('');
   $('hist-o').innerHTML = fh(); pintarFotos(hs, $('hist-o'), fh);
   $('papel-d').textContent = opera() && papel('gerente') ? 'Você pode solicitar, aprovar e lançar custos.' : opera() ? 'Você solicita trocas, autoriza motorista e lança o custo.' : papel('gerente') ? 'Você aprova ou recusa os pedidos.' : '';
