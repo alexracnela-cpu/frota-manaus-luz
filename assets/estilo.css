@@ -256,5 +256,6 @@ body.fundo-pc::before{background:repeating-linear-gradient(-45deg,var(--listra-s
 body.fundo-pc::after{background:repeating-linear-gradient(-45deg,transparent 0 14px,var(--listra) 14px 46px,transparent 46px 80px,var(--listra-m) 80px 112px,transparent 112px 150px);
   -webkit-mask-image:linear-gradient(to bottom right,#000 0 9%,transparent 18% 82%,#000 91%);mask-image:linear-gradient(to bottom right,#000 0 9%,transparent 18% 82%,#000 91%)}
 body.fundo-pc>*{position:relative;z-index:1}
+body.fundo-pc>.lb,body.fundo-pc>.toast{position:fixed;z-index:100}
 body.fundo-pc .note,body.fundo-pc .filters .field>label,body.fundo-pc .mut{text-shadow:0 0 6px var(--fundo-c),0 0 12px var(--fundo-c)}
 body.fundo-pc .card,body.fundo-pc .kpi{box-shadow:0 4px 18px rgba(11,40,90,.08)}

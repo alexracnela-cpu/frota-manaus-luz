@@ -118,7 +118,8 @@ document.addEventListener('click', e => {
   const b = e.target.closest('.thumbs button'); if (!b) return;
   const d = document.createElement('div'); d.className = 'lb';
   d.innerHTML = `<img src="${b.dataset.src}" alt="${b.dataset.cap}"><div>${b.dataset.cap}</div><button class="btn btn-sm btn-main" type="button">Fechar</button>`;
-  d.onclick = () => d.remove(); document.body.appendChild(d);
+  const fechar = () => { d.remove(); document.removeEventListener('keydown', esc_); }; const esc_ = ev => { if (ev.key === 'Escape') fechar(); };
+  d.onclick = fechar; document.addEventListener('keydown', esc_); document.body.appendChild(d);
 });
 
 // ================= ABASTECIMENTO =================
