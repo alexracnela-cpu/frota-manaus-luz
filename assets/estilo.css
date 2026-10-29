@@ -263,7 +263,8 @@ body.fundo-pc .card,body.fundo-pc .kpi{box-shadow:0 4px 18px rgba(11,40,90,.08)}
 /* FLEET: nome do sistema (à esquerda); Manaus Luz no centro */
 .top-in{display:grid!important;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
 .top-in .acts{justify-self:end}
-.brand-fleet{margin:0;line-height:0;justify-self:start}
+.brand-esq{justify-self:start;gap:14px}
+.brand-fleet{margin:0;line-height:0}
 .brand-fleet img{height:58px;width:auto;display:block}
 .brand-centro{justify-self:center}
 .brand-nome{font-family:var(--f-disp);font-weight:700;font-size:24px;line-height:1;white-space:nowrap}
@@ -275,6 +276,6 @@ body.fundo-pc .card,body.fundo-pc .kpi{box-shadow:0 4px 18px rgba(11,40,90,.08)}
 @media (max-width:760px){.top-in{grid-template-columns:auto 1fr}.brand-centro{grid-column:1/-1;grid-row:2;justify-self:start}.brand-fleet img{height:46px}.brand-nome{font-size:20px}}
 .inicio-logo{justify-content:space-between;flex-wrap:wrap;gap:12px}
 .inicio-fleet{margin:0;line-height:0;flex:0 1 auto}
-.inicio-fleet img.fleet-tema{width:100%;max-width:190px;margin:0;background:none;padding:0;border-radius:0}
+.inicio-fleet img.fleet-tema{width:100%;max-width:215px;margin:0;background:none;padding:0;border-radius:0}
 .inicio-ml{display:flex;align-items:center;gap:8px}
 .inicio-ml span{font-family:var(--f-disp);font-weight:700;font-size:18px;line-height:1.05;max-width:90px}
