@@ -21,7 +21,6 @@ function msgErro(e) {
   const m = e.message || String(e);
   if (/Failed to fetch|NetworkError|network/i.test(m)) return 'Sem internet no momento. Confira a conexão e tente de novo.';
   if (/JWT|session/i.test(m) && !/Sessão/.test(m)) return 'Sua sessão expirou. Entre de novo.';
-  if (/Could not find the function|schema cache/i.test(m)) return 'O banco ainda não foi atualizado para esta função. Rode o último arquivo .sql no Supabase.';
   return m;
 }
 
