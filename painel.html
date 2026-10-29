@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Painel da Frota · Manaus Luz</title>
+<title>FLEET · Painel da Frota · Manaus Luz</title>
 <link rel="icon" href="assets/icone-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="assets/estilo.css">
@@ -47,7 +47,8 @@
 <body class="fundo-pc">
 <header class="top">
   <div class="top-in">
-    <div class="brand"><span class="selo" aria-hidden="true"></span><img class="logo" src="assets/logo-branco.png" alt="Manaus Luz"><div><h1>Frota Manaus Luz</h1><small>Painel de abastecimento e troca de óleo</small></div></div>
+    <h1 class="brand-fleet"><img src="assets/fleet-branco.png" alt="FLEET · Sistema de Gestão de Frota"></h1>
+    <div class="brand brand-centro"><span class="selo" aria-hidden="true"></span><img class="logo" src="assets/logo-branco.png" alt="Manaus Luz"><span class="brand-nome">Frota Manaus Luz</span></div>
     <div class="acts">
       <div class="user-top" id="user-top" hidden><span>Olá, <b id="user-nome"></b></span><button class="tema" type="button" id="trocar-senha">Trocar senha</button><button class="tema" type="button" id="sair">Sair</button></div>
       <button class="tema" id="tema" type="button" aria-label="Alternar modo claro e escuro"></button>
@@ -60,6 +61,7 @@
   <!-- login -->
   <section id="v-login" hidden>
     <form class="login-box" id="f-login" novalidate>
+      <img class="fleet-tema" src="assets/fleet.png" alt="FLEET · Sistema de Gestão de Frota"><img class="fleet-tema escuro" src="assets/fleet-branco.png" alt="" aria-hidden="true">
       <h2>Entrar no painel</h2>
       <p class="msg">Use o e-mail e a senha cadastrados para você no sistema.</p>
       <div class="field"><label for="l-email">E-mail</label><input id="l-email" type="email" autocomplete="username"></div>

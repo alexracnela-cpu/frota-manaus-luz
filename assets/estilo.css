@@ -259,3 +259,22 @@ body.fundo-pc>*{position:relative;z-index:1}
 body.fundo-pc>.lb,body.fundo-pc>.toast{position:fixed;z-index:100}
 body.fundo-pc .note,body.fundo-pc .filters .field>label,body.fundo-pc .mut{text-shadow:0 0 6px var(--fundo-c),0 0 12px var(--fundo-c)}
 body.fundo-pc .card,body.fundo-pc .kpi{box-shadow:0 4px 18px rgba(11,40,90,.08)}
+
+/* FLEET: nome do sistema (à esquerda); Manaus Luz no centro */
+.top-in{display:grid!important;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+.top-in .acts{justify-self:end}
+.brand-fleet{margin:0;line-height:0;justify-self:start}
+.brand-fleet img{height:46px;width:auto;display:block}
+.brand-centro{justify-self:center}
+.brand-nome{font-family:var(--f-disp);font-weight:700;font-size:24px;line-height:1;white-space:nowrap}
+.fleet-tema{width:100%;max-width:300px;height:auto;display:block;margin:0 auto 12px}
+.fleet-tema.escuro{display:none}
+:root[data-theme="dark"] .fleet-tema{display:none}
+:root[data-theme="dark"] .fleet-tema.escuro{display:block}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fleet-tema{display:none}:root:not([data-theme="light"]) .fleet-tema.escuro{display:block}}
+@media (max-width:760px){.top-in{grid-template-columns:auto 1fr}.brand-centro{grid-column:1/-1;grid-row:2;justify-self:start}.brand-fleet img{height:38px}.brand-nome{font-size:20px}}
+.inicio-logo{justify-content:space-between;flex-wrap:wrap;gap:12px}
+.inicio-fleet{margin:0;line-height:0;flex:0 1 auto}
+.inicio-fleet img.fleet-tema{width:100%;max-width:190px;margin:0;background:none;padding:0;border-radius:0}
+.inicio-ml{display:flex;align-items:center;gap:8px}
+.inicio-ml span{font-family:var(--f-disp);font-weight:700;font-size:18px;line-height:1.05;max-width:90px}
