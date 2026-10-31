@@ -95,7 +95,7 @@ const CK = (() => {
     if (!base && m.qtd_escada && x.qtd[m.qtd_escada] !== '') x.escadas = Array.from({ length: +x.qtd[m.qtd_escada] }, () => ({ num: '', ok: false, itens: {} }));
     return x;
   }
-  function refItens() { return d.tipo === 'volta' ? d.ref : D.modelos[d.modelo].itens.filter(i => !(i.nome === 'Nível do ARLA 32' && !veic().usa_arla)); }
+  function refItens() { return d.tipo === 'volta' ? d.ref : D.modelos[d.modelo].itens.filter(i => !(i.nome === 'Nível do ARLA 32' && !veic().usa_arla) && !(i.q4 && (veic().portas || 4) < 4)); }
   const veic = () => D.veiculos.find(x => x.placa === d.placa) || {};
 
   function opc(opts, val, act, extra) {

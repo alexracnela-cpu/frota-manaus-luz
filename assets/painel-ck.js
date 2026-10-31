@@ -257,7 +257,7 @@ const PCK = (() => {
   async function carregarCad() {
     try {
       const cols = 'id,nome,re,funcao,papeis,ativo,dirige_moto,dirige_leve,dirige_cesto,dirige_munk,afastado,autoriza,sai_sem_autorizacao';
-      const [c, p, v] = await Promise.all([rpc('painel_ck_cadastros'), sb.from('pessoas').select(cols).order('nome'), sb.from('veiculos').select('placa,modelo,tipo,categoria,ativo,modelo_ck,usa_arla,equip_padrao').order('placa')]);
+      const [c, p, v] = await Promise.all([rpc('painel_ck_cadastros'), sb.from('pessoas').select(cols).order('nome'), sb.from('veiculos').select('*').order('placa')]);
       CAD = c; CAD.veiculos = v.data || []; PP = p.data || [];
       if (A.admin) AUD = await rpc('painel_auditoria', { p_offset: 0 });
     } catch (e) { $('cad-ck').innerHTML = `<div class="alert">${esc(e.message)}</div>`; return; }
@@ -274,10 +274,11 @@ const PCK = (() => {
       ${ps.map(p => `<tr data-p="${p.id}"><td><b>${esc(curto(p.nome))}</b><br><small class="mut">RE ${esc(p.re || '—')} · ${esc(p.funcao || '')}</small></td><td>${chk('moto', p.dirige_moto)}</td><td>${chk('leve', p.dirige_leve)}</td><td>${chk('cesto', p.dirige_cesto)}</td><td>${chk('munk', p.dirige_munk)}</td><td>${chk('afastado', p.afastado)}</td><td>${chk('autoriza', p.autoriza)}</td><td>${chk('sai', p.sai_sem_autorizacao)}</td>
         <td><button type="button" class="btn btn-sm btn-ghost" data-a="salvarPerm" data-v="${p.id}">Salvar</button></td></tr>`).join('')}</tbody></table></div></div>`;
     h += `<div class="card"><div class="card-h"><h2>Veículos no checklist</h2><span class="sub">Modelo de checklist de cada veículo, ARLA 32 e os equipamentos que ele costuma levar (o celular já vem com essas quantidades).</span></div>
-      <div class="tbl-wrap"><table><thead><tr><th>Veículo</th><th>Modelo de checklist</th><th>Usa ARLA 32</th><th>Equipamentos padrão</th><th></th></tr></thead><tbody>
+      <div class="tbl-wrap"><table><thead><tr><th>Veículo</th><th>Modelo de checklist</th><th>Portas</th><th>Usa ARLA 32</th><th>Equipamentos padrão</th><th></th></tr></thead><tbody>
       ${CAD.veiculos.filter(v => v.ativo).map(v => { const ed = edVeic === v.placa, m = ms.find(x => x.modelo === v.modelo_ck);
         return `<tr data-v="${esc(v.placa)}"><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || '')} ${esc(v.tipo || '')}</small></td>
         <td>${ed ? `<select data-ve="modelo"><option value="">Fora do checklist</option>${ms.map(x => `<option value="${x.modelo}" ${x.modelo === v.modelo_ck ? 'selected' : ''}>${esc(x.nome)}</option>`).join('')}</select>` : m ? esc(m.nome) : '<span class="mut">Fora do checklist</span>'}</td>
+        <td>${v.modelo_ck !== 'leve' && !(ed && v.categoria === 'Leve') ? '<span class="mut">—</span>' : ed ? `<select data-ve="portas"><option value="4" ${v.portas !== 2 ? 'selected' : ''}>4 portas</option><option value="2" ${v.portas === 2 ? 'selected' : ''}>2 portas</option></select>` : `${v.portas === 2 ? 2 : 4} portas`}</td>
         <td>${ed ? `<input type="checkbox" class="chk" data-ve="arla" ${v.usa_arla ? 'checked' : ''}>` : v.usa_arla ? 'Sim' : 'Não'}</td>
         <td>${ed && m ? `<div class="eqp">${m.qtd.map(k => `<label class="eqp-i">${esc(k)} <input class="num" data-eq="${esc(k)}" inputmode="numeric" style="width:56px;padding:4px 6px;border-radius:6px;border:1.5px solid var(--line);background:var(--surface)" value="${v.equip_padrao && v.equip_padrao[k] != null ? v.equip_padrao[k] : ''}"></label>`).join('')}</div>` : v.equip_padrao ? esc(Object.entries(v.equip_padrao).map(([k, q]) => `${k} ${q}`).join(' · ')) : '<span class="mut">em branco</span>'}</td>
         <td>${ed ? `<button type="button" class="btn btn-sm btn-ghost" data-a="vCancelar">Cancelar</button> <button type="button" class="btn btn-sm btn-main" data-a="vSalvar" data-v="${esc(v.placa)}">Salvar</button>` : `<button type="button" class="btn btn-sm btn-ghost" data-a="vEditar" data-v="${esc(v.placa)}">Editar</button>`}</td></tr>`; }).join('')}</tbody></table></div></div>`;
@@ -351,7 +352,9 @@ const PCK = (() => {
       case 'vEditar': edVeic = v; return pintaCad();
       case 'vCancelar': edVeic = null; return pintaCad();
       case 'vSalvar': { const tr = b.closest('tr'), eq = {}; tr.querySelectorAll('[data-eq]').forEach(i => { if (i.value !== '') eq[i.dataset.eq] = +i.value.replace(/\D/g, ''); });
-        if (await vai(() => rpc('painel_salvar_veiculo_ck', { p_placa: v, p_modelo_ck: tr.querySelector('[data-ve=modelo]').value || null, p_usa_arla: tr.querySelector('[data-ve=arla]').checked, p_equip: eq }), 'Veículo salvo.')) { edVeic = null; carregarCad(); } return; }
+        const sp = tr.querySelector('[data-ve=portas]'), vv = CAD.veiculos.find(x => x.placa === v);
+        if (await vai(async () => { await rpc('painel_salvar_veiculo_ck', { p_placa: v, p_modelo_ck: tr.querySelector('[data-ve=modelo]').value || null, p_usa_arla: tr.querySelector('[data-ve=arla]').checked, p_equip: eq });
+            if (sp && +sp.value !== (vv && vv.portas === 2 ? 2 : 4)) await rpc('painel_salvar_portas', { p_placa: v, p_portas: +sp.value }); }, 'Veículo salvo.')) { edVeic = null; carregarCad(); } return; }
       case 'eNova': edEsc = ''; return pintaCad();
       case 'eEditar': edEsc = v; return pintaCad();
       case 'eCancelar': edEsc = null; return pintaCad();
