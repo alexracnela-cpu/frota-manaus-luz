@@ -65,6 +65,7 @@ async function teclaEntrada(k) {
 let primeiro = null;
 async function verRe() {
   if (!re) { $('ent-err').textContent = 'Digite seu RE'; return; }
+  if (re.length < 3) { $('ent-err').textContent = 'Digite o RE com 3 números. Ex.: 010'; return; }
   ocupado = true; carregando(true, 'Conferindo…');
   try {
     const r = await rpc('campo_re', { p_re: re });
