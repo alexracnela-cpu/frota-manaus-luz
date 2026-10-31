@@ -91,6 +91,7 @@ async function carregarTudo() {
       tudo('veiculos', 'placa'), tudo('pessoas', 'nome', true, COLS_PESSOAS), tudo('abastecimentos', 'registrado_em'),
       tudo('pedidos_troca', 'id'), tudo('trocas_oleo', 'data'), tudo('listas', 'ordem')]);
   } catch (e) { $('note').textContent = 'Não consegui carregar os dados: ' + e.message; return; }
+  try { KC = await rpc('painel_km_checklist') || {}; } catch (_) { KC = {}; }   // antes do 14_km_checklist.sql: só abastecimento e troca
   AB.forEach(r => { r.t = new Date(r.registrado_em); r.l = r.litros == null ? 0 : Number(r.litros); });
   TR.forEach(r => { r.d = new Date(r.data); });
   analisar(); montarFiltros(); pintaDatas(); render(); renderOleo(); if (cadastra()) { renderCad(); renderFotos(); }
@@ -240,9 +241,11 @@ $('rev').addEventListener('click', async e => {
 
 // ================= TROCA DE ÓLEO =================
 let catO = '';
+// km atual = o maior entre o último abastecimento, a última troca e o último checklist (14_km_checklist.sql)
+let KC = {};
 function kmAtual(pl) {
-  const a = AB.filter(r => r.placa === pl && r.km != null && !r.sus).at(-1), t = TR.filter(r => r.placa === pl && r.km != null).at(-1);
-  return Math.max(a ? a.km : 0, t ? t.km : 0) || null;
+  const a = AB.filter(r => r.placa === pl && r.km != null && !r.sus).at(-1), t = TR.filter(r => r.placa === pl && r.km != null).at(-1), c = KC[pl];
+  return Math.max(a ? a.km : 0, t ? t.km : 0, c ? c.km : 0) || null;
 }
 function ultimaTroca(pl) { return TR.filter(r => r.placa === pl).at(-1); }
 function situacao(v) {
