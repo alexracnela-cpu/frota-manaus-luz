@@ -448,6 +448,11 @@ async function renderFotos() {
   $('arquivados').innerHTML = d.arquivados.length ? 'Meses já arquivados: ' + d.arquivados.map(a => `${nomeMes(a.mes.slice(0, 7))} (${fmt(a.registros)} registros, em ${dataBr(a.em)})`).join(' · ') : '';
 }
 
+// pastas do .zip e nomes no indice.csv (checklist e escadas vêm do 12_fotos_checklist.sql)
+const PASTA = { abastecimento: 'abastecimentos', troca: 'trocas-de-oleo', checklist: 'checklists', escada: 'escadas' };
+const ROT_FOTO = { item: 'Item com problema', avaria: 'Avaria', escada: 'Escada com NC', recusa: 'Recusa', foto: 'Foto' };
+const rotuloFoto = k => { const m = /^([a-z]+)(\d*)$/.exec(k); return m && ROT_FOTO[m[1]] ? ROT_FOTO[m[1]] + (m[2] ? ' ' + m[2] : '') : k; };
+const TIPO_FOTO = { abastecimento: 'Abastecimento', troca: 'Troca de óleo', checklist: 'Checklist', escada: 'Inspeção de escada' };
 async function baixarZip(mes, btn) {
   const txt = btn.textContent; btn.disabled = true; ocupadoFotos = true;
   try {
@@ -466,13 +471,13 @@ async function baixarZip(mes, btn) {
     const p2 = n => String(n).padStart(2, '0');
     async function pega(x) {
       const d = new Date(x.r.data), dia = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`, hora = `${p2(d.getHours())}${p2(d.getMinutes())}`;
-      const pasta = x.r.tipo === 'troca' ? 'trocas-de-oleo' : 'abastecimentos';
-      const nome = `${pasta}/${dia}_${hora}_${x.r.placa}_${x.k}_${x.r.id}.jpg`;
+      const pasta = PASTA[x.r.tipo] || 'outros';
+      const nome = `${pasta}/${dia}_${hora}_${x.r.placa}_${x.k}_${x.r.numero || x.r.id}.jpg`;
       try {
         if (!urls[x.cam]) throw new Error('sem link');
         const resp = await fetch(urls[x.cam]); if (!resp.ok) throw new Error('HTTP ' + resp.status);
         arquivos.push({ nome, dados: new Uint8Array(await resp.arrayBuffer()), data: d });
-        linhas.push([x.r.tipo === 'troca' ? 'Troca de óleo' : 'Abastecimento', dataBr(d), `${p2(d.getHours())}:${p2(d.getMinutes())}`, x.r.placa, NF[x.k] || x.k, nome].join(';'));
+        linhas.push([TIPO_FOTO[x.r.tipo] || x.r.tipo, dataBr(d), `${p2(d.getHours())}:${p2(d.getMinutes())}`, x.r.placa, NF[x.k] || rotuloFoto(x.k), nome].join(';'));
       } catch (_) { falhas.push(x); }
       feitos++; btn.textContent = `Baixando ${feitos}/${itens.length}…`;
     }
@@ -499,7 +504,10 @@ async function excluirMes(mes, btn) {
       (data || []).forEach(o => apagados.add(o.name));
     }
     const ok = regs.filter(r => Object.values(r.fotos).every(c => apagados.has(c)));
-    await rpc('painel_marcar_arquivadas', { p_abast: ok.filter(r => r.tipo === 'abastecimento').map(r => r.id), p_trocas: ok.filter(r => r.tipo === 'troca').map(r => r.id) });
+    const arq = { p_abast: ok.filter(r => r.tipo === 'abastecimento').map(r => r.id), p_trocas: ok.filter(r => r.tipo === 'troca').map(r => r.id) };
+    const cks = ok.filter(r => r.tipo === 'checklist').map(r => r.id), insp = ok.filter(r => r.tipo === 'escada').map(r => r.id);
+    if (cks.length || insp.length) Object.assign(arq, { p_cks: cks, p_insp: insp });
+    await rpc('painel_marcar_arquivadas', arq);
     baixados.delete(mes); confirmando = null;
     if (ok.length < regs.length) toast(`Excluídas as fotos de ${ok.length} de ${regs.length} registros. Tente de novo para o restante.`, true);
     else toast(`Fotos de ${nomeMes(mes)} excluídas. Os registros continuam no painel.`);

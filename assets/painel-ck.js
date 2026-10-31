@@ -49,7 +49,8 @@ const PCK = (() => {
     (data || []).forEach(x => { if (x.signedUrl) urls[x.path] = x.signedUrl; });
   }
   const fotosDe = o => { const out = []; (function f(x) { if (!x || typeof x !== 'object') return; for (const k in x) { if (k === 'foto' && typeof x[k] === 'string' && x[k]) out.push(x[k]); else f(x[k]); } })(o); return out; };
-  const thumb = (p, w = 58, h = 42) => p && urls[p] ? `<a href="${urls[p]}" target="_blank" rel="noopener"><img class="fthumb" src="${urls[p]}" alt="Foto" style="width:${w}px;height:${h}px;object-fit:cover"></a>` : p ? `<span class="fthumb" style="width:${w}px;height:${h}px">FOTO</span>` : '';
+  let arq = false;   // fotos do registro já arquivadas (excluídas depois do .zip)
+  const thumb = (p, w = 58, h = 42) => p && urls[p] ? `<a href="${urls[p]}" target="_blank" rel="noopener"><img class="fthumb" src="${urls[p]}" alt="Foto" style="width:${w}px;height:${h}px;object-fit:cover"></a>` : p ? `<span class="fthumb" style="width:${w}px;height:${h}px;font-size:9px">${arq ? 'ARQUIVADA' : 'FOTO'}</span>` : '';
 
   // =================== ABA CHECKLIST ===================
   async function carregarCk() {
@@ -142,7 +143,7 @@ const PCK = (() => {
   }
   function folha(c) {
     const m = c.modelo_info, ult = c.volta || c.saida, it = ult.itens || {}, ref = c.itens_ref;
-    parou = ['bloqueado', 'recusado', 'barrado', 'cancelado'].includes(c.situacao);
+    parou = ['bloqueado', 'recusado', 'barrado', 'cancelado'].includes(c.situacao); arq = !!c.fotos_arquivadas_em;
     const probs = ref.filter(r => ruim((it[r.id] || {}).v)).length;
     const sit = c.situacao === 'fim' && c.volta && (c.volta.criticos || []).length && !c.desbloqueio ? 'BLOQUEADO' : (SIT_CK[c.situacao] || c.situacao).toUpperCase();
     const comb = i => { const n = Math.round(i / 2); return `<span style="display:inline-flex;gap:2px">${[1, 2, 3, 4].map(k => `<i style="width:14px;height:7px;border-radius:2px;background:${k <= n ? '#1f4ea8' : '#e3e6ec'}"></i>`).join('')}</span> <span class="num" style="font-size:11px">${NIV[i]}</span>`; };
@@ -227,7 +228,7 @@ const PCK = (() => {
     catch (e) { toast(e.message, true); }
   }
   function folhaE(i) {
-    const ext = (i.escada_ref.tipo || '') === 'Extensiva', its = i.itens || {};
+    const its = i.itens || {}; arq = !!i.fotos_arquivadas_em;
     const nNC = i.problemas.length, nNA = Object.values(its).filter(x => x.v === 'NA').length, nC = Object.values(its).filter(x => x.v === 'C').length;
     const lin = (r, k) => { const v = (its[r.id] || {}).v || 'NA'; return `<div class="fit fe-it ${v === 'NC' ? 'r' : ''}"><span><span class="fe-n">${String(r.ordem).padStart(2, '0')}</span>${esc(r.nome)}</span><span class="fchip c2 ${v === 'NC' ? 'm' : v === 'NA' ? 'n' : ''}">${v}</span></div>`; };
     const ref = i.itens_ref, meio = Math.ceil(ref.length / 2);
