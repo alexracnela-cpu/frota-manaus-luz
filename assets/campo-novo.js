@@ -15,6 +15,7 @@ const telas = ['s-config', 's-inicio', 's-primeiro', 's-criar', 's-menu', 's-for
 const COM_FUNDO = ['s-inicio', 's-primeiro', 's-criar', 's-menu', 's-form', 's-ck'];
 function tela(id) {
   telas.forEach(s => $(s).hidden = s !== id);
+  $('tema').hidden = !['s-inicio', 's-menu', 's-config'].includes(id);   // botão Modo claro/escuro só na entrada e no menu
   document.querySelector('.screen').classList.toggle('fundo', COM_FUNDO.includes(id));
   if (id !== 's-done') clearInterval(tSaida);
   if (token) inativo(); else clearTimeout(tInativo);
@@ -318,4 +319,5 @@ $('o-form').addEventListener('submit', async e => {
 async function telaAcesa() { try { if ('wakeLock' in navigator && document.visibilityState === 'visible') await navigator.wakeLock.request('screen'); } catch (_) {} }
 document.addEventListener('visibilitychange', telaAcesa); telaAcesa();
 
+iniciarTema();
 if (!configurado) tela('s-config'); else { limparEntrada(); tela('s-inicio'); }

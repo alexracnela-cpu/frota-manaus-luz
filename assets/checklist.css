@@ -198,3 +198,7 @@ body.fundo-pc>#ck-modal{position:fixed;z-index:60}
 .tabs:has(>button:nth-of-type(4):not([hidden]))>button{font-size:clamp(15px,1.4vw,21px);padding:14px 8px 18px;letter-spacing:.03em}
 .tabs:has(>button:nth-of-type(4):not([hidden])) .tab-l{gap:8px}
 .tabs:has(>button:nth-of-type(4):not([hidden])) .tab-l svg{width:24px;height:24px}
+
+/* celular: botão Modo claro/escuro (tela inicial e menu) */
+.tema-cel{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;z-index:5;color:var(--fg);background:var(--surface);border-color:var(--line);box-shadow:0 2px 8px rgba(11,40,90,.12);font-size:13px;padding:6px 10px}
+.tema-cel:hover{background:var(--sunk)}
