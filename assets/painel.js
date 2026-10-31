@@ -395,7 +395,7 @@ function renderCad() {
   const semRe = PE.filter(p => p.ativo && usaCelular(p) && !p.re).length;
   $('pes-sub').innerHTML = semRe ? `<span class="bad">${semRe} ${semRe === 1 ? 'pessoa do celular está' : 'pessoas do celular estão'} sem RE</span>` : '';
   $('t-pessoas').innerHTML = ord.map(p => `<tr class="${p.ativo ? '' : 'inativo'}"><td><b>${esc(p.nome)}</b><br><small class="mut">${esc(p.funcao || '')}${p.email ? ' · ' + esc(p.email) : ''}</small></td><td class="num">${p.re ? esc(p.re) : p.ativo ? '<span class="bad">falta RE</span>' : '—'}</td><td>${p.papeis.map(x => `<span class="pill info" style="margin:1px">${esc((NOME_PAPEL[x] || x).split(' (')[0])}</span>`).join(' ')}</td><td>${p.ativo && usaCelular(p) ? situacaoPin(p) : ''}</td><td><button type="button" class="btn btn-sm btn-ghost" data-edp="${p.id}">Editar</button></td></tr>`).join('');
-  $('t-veics').innerHTML = VE.map(v => `<tr class="${v.ativo ? '' : 'inativo'}"><td><b>${esc(v.placa)}</b></td><td>${esc(v.modelo || '')}${v.fabricante ? ` <small class="mut">· ${esc(v.fabricante)}</small>` : ''}<br><small class="mut">${esc(v.tipo || '')}</small></td><td>${esc(v.categoria)}${v.garantia ? ' <span class="pill gar">Garantia</span>' : ''}</td><td class="r num">${v.intervalo_km ? fmt(v.intervalo_km) : '—'}</td><td>${v.frota_pesada ? 'Sim' : ''}</td><td><button type="button" class="btn btn-sm btn-ghost" data-edv="${esc(v.placa)}">Editar</button></td></tr>`).join('');
+  $('t-veics').innerHTML = VE.map(v => `<tr class="${v.ativo ? '' : 'inativo'}"><td><b>${esc(v.placa)}</b></td><td>${esc(v.modelo || '')}${v.fabricante ? ` <small class="mut">· ${esc(v.fabricante)}</small>` : ''}<br><small class="mut">${esc(v.tipo || '')}</small></td><td>${esc(v.categoria)}${v.categoria === 'Leve' ? ` <small class="mut">· ${v.portas === 2 ? 2 : 4} portas</small>` : ''}${v.garantia ? ' <span class="pill gar">Garantia</span>' : ''}</td><td class="r num">${v.intervalo_km ? fmt(v.intervalo_km) : '—'}</td><td>${v.frota_pesada ? 'Sim' : ''}</td><td><button type="button" class="btn btn-sm btn-ghost" data-edv="${esc(v.placa)}">Editar</button></td></tr>`).join('');
   const tipos = [['estabelecimento', 'Locais da troca'], ['oleo', 'Tipos de óleo'], ['funcao', 'Funções (motorista ou outro)']];
   $('listas').innerHTML = tipos.map(([t, n]) => `<div style="margin-bottom:14px"><b>${n}</b><div class="chips-lista">${LI.filter(l => l.tipo === t).map(l => `<span>${esc(l.valor)}<button type="button" data-rml="${t}" data-v="${esc(l.valor)}" aria-label="Remover ${esc(l.valor)}">×</button></span>`).join('')}</div><div class="linha-btn" style="margin-top:8px"><input id="nl-${t}" placeholder="Adicionar" style="padding:6px 8px;border-radius:6px;border:1.5px solid var(--line);background:var(--surface)"><button type="button" class="btn btn-sm btn-ghost" data-addl="${t}">Adicionar</button></div></div>`).join('');
 }
@@ -443,10 +443,11 @@ $('p-zerar-sim').onclick = async () => {
 function abrirVeic(v) {
   $('f-veic').hidden = false; $('v-msg').textContent = '';
   $('v-placa').value = v ? v.placa : ''; $('v-placa').readOnly = !!v; $('v-modelo').value = v ? v.modelo || '' : ''; $('v-cat').value = v ? v.categoria : 'Pesado';
-  $('v-tipo').value = v ? v.tipo || '' : ''; $('v-fab').value = v ? v.fabricante || fabDoModelo(v.modelo) : ''; $('v-int').value = v && v.intervalo_km ? v.intervalo_km : '';
+  $('v-tipo').value = v ? v.tipo || '' : ''; $('v-fab').value = v ? v.fabricante || fabDoModelo(v.modelo) : ''; $('v-portas').value = v && v.portas === 2 ? '2' : '4'; $('v-portas-f').hidden = $('v-cat').value !== 'Leve'; $('v-int').value = v && v.intervalo_km ? v.intervalo_km : '';
   $('v-pesada').checked = v ? v.frota_pesada : false; $('v-gar').checked = v ? v.garantia : false; $('v-ativo').checked = v ? v.ativo : true;
 }
 $('novo-veic').onclick = () => abrirVeic(null);
+$('v-cat').addEventListener('change', () => { $('v-portas-f').hidden = $('v-cat').value !== 'Leve'; });
 $('v-cancelar').onclick = () => { $('f-veic').hidden = true; };
 $('t-veics').addEventListener('click', e => { const p = e.target.dataset.edv; if (p) { abrirVeic(veic(p)); $('f-veic').scrollIntoView({ block: 'start', behavior: 'smooth' }); } });
 $('f-veic').addEventListener('submit', async e => {
@@ -455,6 +456,11 @@ $('f-veic').addEventListener('submit', async e => {
     await rpc('painel_salvar_veiculo', { p_placa: $('v-placa').value, p_modelo: $('v-modelo').value || null, p_categoria: $('v-cat').value, p_tipo: $('v-tipo').value || null,
       p_intervalo: parseInt($('v-int').value, 10) || null, p_garantia: $('v-gar').checked, p_frota_pesada: $('v-pesada').checked, p_ativo: $('v-ativo').checked });
     const vAnt = veic($('v-placa').value.trim().toUpperCase()), fab = $('v-fab').value.trim();
+    const portas = +$('v-portas').value;
+    if ($('v-cat').value === 'Leve' && portas !== (vAnt && vAnt.portas === 2 ? 2 : 4)) {
+      try { await rpc('painel_salvar_portas', { p_placa: $('v-placa').value.trim().toUpperCase(), p_portas: portas }); }
+      catch (err) { toast(err.message, true); }
+    }
     if (fab !== ((vAnt && vAnt.fabricante) || '')) {
       try { await rpc('painel_salvar_fabricante', { p_placa: $('v-placa').value, p_fabricante: fab }); }
       catch (err) { toast(/painel_salvar_fabricante|function/i.test(err.message) ? 'Veículo salvo, mas o fabricante só grava depois de rodar o 15_fabricante.sql.' : err.message, true); }
