@@ -11,7 +11,8 @@
 <link rel="apple-touch-icon" href="assets/icone-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/estilo.css">
+<link rel="stylesheet" href="assets/estilo.css?v=5">
+<link rel="stylesheet" href="assets/checklist.css?v=2">
 <style>
   html,body{margin:0;min-height:100%}
   body.campo{background:var(--bg)}
@@ -32,25 +33,58 @@
     <div class="alert">Abra o arquivo <b>assets/config.js</b> e cole a Project URL e a chave pública do Supabase.</div>
   </div>
 
-  <!-- início -->
+  <!-- entrada: RE + PIN -->
   <div id="s-inicio" class="pane" hidden style="padding-top:22px">
     <div class="inicio-logo"><h2 class="inicio-fleet"><img class="fleet-tema" src="assets/fleet.png?v=2" alt="FLEET · Sistema de Gestão de Frota"><img class="fleet-tema escuro" src="assets/fleet-branco.png?v=2" alt="" aria-hidden="true"></h2><div class="inicio-ml"><img src="assets/logo-branco.png" alt="Manaus Luz"><span>Frota Manaus Luz</span></div></div>
-    <div class="who" style="margin-bottom:6px">O que você vai registrar?</div>
-    <div class="mods">
-      <button type="button" class="mod" data-mod="abastecimento"><span class="ic" id="ic-ab"></span><span><b>Abastecimento</b></span></button>
-      <button type="button" class="mod" data-mod="oleo"><span class="ic" id="ic-ol"></span><span><b>Troca de óleo</b></span></button>
+    <div class="entrada">
+      <div class="field"><label id="l-re">Seu RE</label>
+        <button type="button" class="re-box num" id="re-box" aria-labelledby="l-re"><span id="re-txt"></span><span class="re-ph" id="re-ph">Digite seu RE</span></button></div>
+      <div class="field" id="pin-sec" hidden><label>PIN</label>
+        <div class="pin-dots grande" id="dots"><span></span><span></span><span></span><span></span></div></div>
+      <div class="err" id="ent-err" role="alert"></div>
+    </div>
+    <div class="pad pad-grande" id="pad-ent"></div>
+  </div>
+
+  <!-- primeiro acesso: confirmar o nome -->
+  <div id="s-primeiro" class="pane" hidden style="padding-top:22px">
+    <div><h2 style="font-size:28px">Primeiro acesso</h2><div class="who">Confirme que este cadastro é seu</div></div>
+    <div class="confirma-nome">
+      <span class="mut num" id="pr-re"></span>
+      <span class="voce">Você é</span>
+      <b id="pr-nome"></b>
+      <span id="pr-funcao" class="mut"></span>
+    </div>
+    <div class="botoes-col">
+      <button type="button" class="btn btn-main btn-alto" id="sou-eu">Sou eu</button>
+      <button type="button" class="btn btn-ghost btn-alto" id="nao-sou">Não sou eu</button>
     </div>
   </div>
 
-  <!-- login -->
-  <div id="s-login" class="pane" hidden style="padding-top:12px">
-    <button type="button" class="voltar" id="voltar"></button>
-    <div><h2 style="font-size:26px">Entrar</h2><div class="who">Escolha seu nome e digite seu PIN</div><span class="modtag" id="modtag"></span></div>
-    <div class="users" id="users"></div>
-    <div class="pin-dots" id="dots"><span></span><span></span><span></span><span></span></div>
-    <div class="hint" id="pin-msg" style="justify-content:center"></div>
-    <div class="err" id="pin-err" role="alert"></div>
-    <div class="pad" id="pad"></div>
+  <!-- primeiro acesso: criar PIN -->
+  <div id="s-criar" class="pane" hidden style="padding-top:12px">
+    <button type="button" class="voltar" id="cr-voltar"></button>
+    <div><h2 style="font-size:28px">Crie seu PIN</h2><div class="who" id="cr-passo">Passo 1 de 2: escolha 4 números</div></div>
+    <div class="pin-dots grande" id="cr-dots"><span></span><span></span><span></span><span></span></div>
+    <div class="hint" style="justify-content:center;text-align:center">Não vale 1234, 0000, 1111 e parecidos. Ninguém mais vai ver seu PIN.</div>
+    <div class="err" id="cr-err" role="alert"></div>
+    <div class="pad pad-grande" id="pad-cr"></div>
+  </div>
+
+  <!-- menu: só os botões dos papéis da pessoa -->
+  <div id="s-menu" class="pane" hidden style="padding-top:18px">
+    <div class="ola"><span class="av" id="m-av"></span><div><h2 id="m-ola"></h2><div class="who" id="m-funcao"></div></div></div>
+    <div class="mods" id="m-mods">
+      <button type="button" class="mod" data-mod="abastecimento" id="m-ab"><span class="ic" id="ic-ab"></span><span><b>Abastecimento</b></span></button>
+      <button type="button" class="mod" data-mod="oleo" id="m-ol"><span class="ic" id="ic-ol"></span><span><b>Troca de óleo</b><span class="etq" id="m-ol-etq"></span></span></button>
+      <button type="button" class="mod" data-mod="checklist" id="m-ck"><span class="ic" id="ic-ck"></span><span><b>Checklist</b><small>Saída e volta do veículo</small><span class="etq" id="m-ck-etq"></span></span></button>
+      <button type="button" class="mod" data-mod="autorizacoes" id="m-aut"><span class="ic" id="ic-aut"></span><span><b>Autorizações</b><span class="etq" id="m-aut-etq"></span></span></button>
+      <button type="button" class="mod" data-mod="portaria" id="m-port"><span class="ic" id="ic-port"></span><span><b>Portaria</b><span class="etq" id="m-port-etq"></span></span></button>
+      <button type="button" class="mod" data-mod="bloqueados" id="m-blq"><span class="ic" id="ic-blq"></span><span><b>Veículos bloqueados</b><span class="etq" id="m-blq-etq"></span></span></button>
+    </div>
+    <div class="vazio" id="m-vazio" hidden><b>Nenhuma tarefa liberada para você agora</b><span>Seu cadastro ainda não tem nenhuma permissão no celular. Fale com a líder de frota.</span></div>
+    <button type="button" class="btn btn-ghost" id="m-sair">Sair</button>
+    <div class="who" style="text-align:center;margin-top:-6px">Sai sozinho em 2 minutos sem uso</div>
   </div>
 
   <!-- abastecimento -->
@@ -78,24 +112,16 @@
   <!-- troca de óleo: lista de aprovados -->
   <div id="s-oleo" class="pane" hidden style="padding-top:12px">
     <div class="appbar" style="padding:0"><div><h2>Troca de óleo</h2><div class="who" id="who-oleo"></div></div><button class="linkbtn" id="sair-oleo">Sair</button></div>
-    <div class="who" style="margin-top:-4px">Veículos aprovados para troca. Toque no veículo para registrar.</div>
+    <div class="who" style="margin-top:-4px" id="oleo-dica">Veículos aprovados para troca. Toque no veículo para registrar.</div>
     <div class="users" id="lista-apr"></div>
+    <button type="button" class="voltar" id="oleo-menu" hidden></button>
   </div>
 
   <!-- troca de óleo: formulário -->
   <div id="s-oleo-form" hidden>
-    <div class="appbar"><div><h2>Registrar troca</h2></div><button type="button" class="voltar" id="o-voltar" style="padding:6px 14px 6px 10px;font-size:14px"></button></div>
+    <div class="appbar"><div><h2>Registrar troca</h2><div class="who" id="who-oleo2"></div></div><button type="button" class="voltar" id="o-voltar" style="padding:6px 14px 6px 10px;font-size:14px"></button></div>
     <form class="pane" id="o-form" novalidate>
       <div class="veic-box" id="o-veic"></div>
-      <div id="o-quem" class="quem" hidden>
-        <div class="quem-t">Quem está levando o veículo</div>
-        <div class="field"><label for="o-nome">Nome completo</label><input id="o-nome" list="lista-mot" autocomplete="off" placeholder="Digite ou escolha"></div>
-        <datalist id="lista-mot"></datalist>
-        <div class="two">
-          <div class="field"><label for="o-re">RE</label><input id="o-re" class="num" inputmode="numeric" autocomplete="off" placeholder="Matrícula"></div>
-          <div class="field"><label for="o-funcao">Função</label><select id="o-funcao"></select></div>
-        </div>
-      </div>
       <div class="auto" id="o-agora"></div>
       <div class="field"><label for="o-estab">Local da troca</label><select id="o-estab"></select></div>
       <div class="field"><label for="o-oleo">Óleo usado</label><select id="o-oleo"></select></div>
@@ -117,6 +143,9 @@
     </form>
   </div>
 
+  <!-- checklist, autorizações, portaria e veículos bloqueados (assets/checklist.js) -->
+  <div id="s-ck" hidden></div>
+
   <!-- confirmação -->
   <div id="s-done" class="pane" hidden>
     <div class="faixa" aria-hidden="true" style="margin:0 -18px"></div>
@@ -134,7 +163,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="assets/config.js"></script>
-<script src="assets/comum.js"></script>
-<script src="assets/campo.js"></script>
+<script src="assets/comum.js?v=5"></script>
+<script src="assets/icones-ck.js?v=2"></script>
+<script src="assets/campo-novo.js?v=3"></script>
+<script src="assets/checklist.js?v=2"></script>
 </body>
 </html>

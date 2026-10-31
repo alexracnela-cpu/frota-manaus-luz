@@ -1,6 +1,8 @@
 // Painel do PC: abastecimento, troca de óleo e cadastros
 const LIMITE = 1500;
-const COLS_PESSOAS = 'id,nome,re,funcao,papeis,email,ativo,criado_em,tem_pin';
+const COLS_PESSOAS_ANT = 'id,nome,re,funcao,papeis,email,ativo,criado_em,tem_pin';
+let COLS_PESSOAS = COLS_PESSOAS_ANT + ',pin_criado_em', falta09 = false;
+const CAMPO = ['porteiro', 'mecanico', 'motorista'];   // papéis que usam o celular
 let eu = null, VE = [], PE = [], AB = [], PD = [], TR = [], LI = [];
 const papel = p => eu && (eu.papeis.includes(p) || eu.papeis.includes('admin'));
 const opera = () => papel('lider') || papel('assistente');  // solicita, autoriza, lança custo, corrige km
@@ -65,6 +67,7 @@ async function entrarPainel() {
   $('tab-btn-cad').hidden = !cadastra();
   $('th-corr').hidden = !opera();
   mostrar('painel'); await carregarTudo(); verUsoFotos();
+  if (falta09 && cadastra()) toast('Falta rodar o arquivo 09_login_re_pin.sql no Supabase para o login por RE funcionar.', true);
   if (typeof PCK !== 'undefined') await PCK.iniciar();   // checklist e escadas (painel-ck.js)
 }
 
@@ -80,6 +83,9 @@ async function tudo(tabela, ordem, asc = true, cols = '*') {
 }
 async function carregarTudo() {
   $('note').textContent = 'Carregando dados…';
+  // antes de rodar o 09_login_re_pin.sql a coluna pin_criado_em não existe: usa a lista antiga
+  if (!falta09) { try { await sb.from('pessoas').select(COLS_PESSOAS).limit(1).then(r => { if (r.error) throw r.error; }); }
+    catch (e) { if (/pin_criado_em/.test(e.message || '')) { falta09 = true; COLS_PESSOAS = COLS_PESSOAS_ANT; } } }
   try {
     [VE, PE, AB, PD, TR, LI] = await Promise.all([
       tudo('veiculos', 'placa'), tudo('pessoas', 'nome', true, COLS_PESSOAS), tudo('abastecimentos', 'registrado_em'),
@@ -257,6 +263,12 @@ function situacao(v) {
 }
 const pedidoAberto = pl => PD.find(x => x.placa === pl && ['solicitado', 'aprovado', 'realizado'].includes(x.status));
 const trocaDoPedido = id => TR.find(t => t.pedido_id === id);
+const autorizadoHoje = x => x.autorizado_para && x.autorizado_dia === iso(new Date());
+// pessoas que podem ser autorizadas: ativas e com RE (motoristas primeiro)
+function opcoesMotorista() {
+  return PE.filter(p => p.ativo && p.re).sort((a, b) => (b.papeis.includes('motorista') - a.papeis.includes('motorista')) || a.nome.localeCompare(b.nome))
+    .map(p => `<option value="${p.id}">${esc(curto(p.nome))} · RE ${esc(p.re)}${p.funcao ? ' · ' + esc(p.funcao) : ''}</option>`).join('');
+}
 function passos(x) {
   const st = ['solicitado', 'aprovado', 'realizado', 'fechado'], nomes = ['Solicitado', 'Aprovado', 'Realizado', 'Custo lançado'];
   if (x.status === 'recusado') return '<div class="passos"><span class="ps feito">Solicitado</span><span class="ps rec">Recusado</span></div>';
@@ -310,9 +322,9 @@ function renderOleo() {
   const fp = () => ps.map(x => { const v = veic(x.placa), t = trocaDoPedido(x.id); let act = '';
     if (x.status === 'solicitado' && papel('gerente')) act = `<div class="ped-act"><button type="button" class="btn btn-sm btn-main" data-apr="${x.id}">Aprovar</button><input id="mot-${x.id}" placeholder="Motivo, se recusar" aria-label="Motivo da recusa"><button type="button" class="btn btn-sm btn-ghost" data-rec="${x.id}">Recusar</button></div>`;
     else if (x.status === 'solicitado') act = '<div class="mut">Aguardando o gerente aprovar.</div>';
-    if (x.status === 'aprovado' && opera()) act = x.codigo && !x.codigo_usado && x.codigo_dia === iso(new Date())
-      ? `<div class="cod"><div><span class="mut">Código para o motorista · vale só hoje, só para ${esc(x.placa)}</span><b class="num">${esc(x.codigo)}</b></div><button type="button" class="btn btn-sm btn-ghost" data-copia="${esc(x.codigo)}">Copiar</button><button type="button" class="btn btn-sm btn-ghost" data-canc="${x.id}">Cancelar código</button></div>`
-      : `<div class="ped-act"><button type="button" class="btn btn-sm btn-ghost" data-lib="${x.id}">AUTORIZAR MOTORISTA</button><button type="button" class="btn btn-sm btn-ghost" data-cancped="${x.id}">Cancelar pedido</button><span class="mut">O código vale só hoje, para um motorista fazer esta troca.</span></div>`;
+    if (x.status === 'aprovado' && opera()) act = autorizadoHoje(x)
+      ? `<div class="aut"><span>Autorizado para <b>${esc(curto(pessoaNome(x.autorizado_para)))}</b> hoje · ele entra no celular com o RE e o PIN dele e vê só a ${esc(x.placa)}</span><button type="button" class="btn btn-sm btn-ghost" data-cancaut="${x.id}">Cancelar autorização</button><button type="button" class="btn btn-sm btn-ghost" data-cancped="${x.id}">Cancelar pedido</button></div>`
+      : `<div class="ped-act"><select id="aut-${x.id}" aria-label="Motorista que vai levar o veículo"><option value="">Escolha quem vai levar</option>${opcoesMotorista()}</select><button type="button" class="btn btn-sm btn-ghost" data-aut="${x.id}">AUTORIZAR MOTORISTA</button><button type="button" class="btn btn-sm btn-ghost" data-cancped="${x.id}">Cancelar pedido</button><span class="mut">Vale só hoje, só para este veículo e para uma troca.</span></div>`;
     if (x.status === 'realizado' && opera() && t) act = `<div class="ped-act"><label for="cus-${t.id}" class="mut">Custo (R$)</label><input id="cus-${t.id}" inputmode="decimal" placeholder="0,00" class="num"><button type="button" class="btn btn-sm btn-main" data-cus="${t.id}">Lançar custo</button></div>`;
     else if (x.status === 'realizado') act = '<div class="mut">A líder de frota vai lançar o custo.</div>';
     const det = t ? `${dataBr(t.d)} · ${esc(curto(t.feito_por_nome))}${t.funcao && t.funcao !== 'Mecânico' ? ` (${esc(t.funcao)}${t.re ? ', RE ' + esc(t.re) : ''})` : ''} · ${esc(t.estabelecimento || '')} · ${esc(t.oleo || '')} · ${fmt(t.km)} km${t.requisicao ? ' · req. ' + esc(t.requisicao) : ''}${t.custo != null ? ' · ' + real(t.custo) : ''}`
@@ -341,8 +353,9 @@ $('tab-oleo').addEventListener('click', async e => {
     if (d.sol) { await rpc('painel_solicitar', { p_placa: d.sol }); toast('Troca solicitada. Aguardando o gerente.'); }
     else if (d.apr) { await rpc('painel_decidir', { p_pedido: +d.apr, p_aprovar: true }); toast('Aprovado. O veículo já aparece para o mecânico.'); }
     else if (d.rec) { await rpc('painel_decidir', { p_pedido: +d.rec, p_aprovar: false, p_motivo: $('mot-' + d.rec).value }); toast('Pedido recusado.'); }
-    else if (d.lib) { const c = await rpc('painel_liberar_codigo', { p_pedido: +d.lib }); toast('Código ' + c + ' gerado.'); }
-    else if (d.canc) { await rpc('painel_cancelar_codigo', { p_pedido: +d.canc }); toast('Código cancelado.'); }
+    else if (d.aut) { const s = $('aut-' + d.aut); if (!s.value) { s.focus(); toast('Escolha quem vai levar o veículo.', true); return; }
+      await rpc('painel_autorizar_motorista', { p_pedido: +d.aut, p_pessoa: s.value }); toast('Autorizado. A pessoa entra no celular com o RE e o PIN dela.'); }
+    else if (d.cancaut) { await rpc('painel_cancelar_autorizacao', { p_pedido: +d.cancaut }); toast('Autorização cancelada.'); }
     else if (d.cancped) { await rpc('painel_cancelar_pedido', { p_pedido: +d.cancped }); toast('Pedido cancelado.'); }
     else if (d.cus) { const v = parseFloat($('cus-' + d.cus).value.replace(/\./g, '').replace(',', '.')); if (!(v > 0)) { $('cus-' + d.cus).focus(); return; } await rpc('painel_lancar_custo', { p_troca: +d.cus, p_custo: v }); toast('Custo lançado.'); }
     else if (d.copia) { try { await navigator.clipboard.writeText(d.copia); e.target.textContent = 'Copiado'; } catch (_) { e.target.textContent = d.copia; } return; }
@@ -355,8 +368,19 @@ $('tab-oleo').addEventListener('click', async e => {
 const PAPEIS = [['porteiro', 'Porteiro (abastecimento)'], ['mecanico', 'Mecânico (troca de óleo)'], ['motorista', 'Motorista'], ['lider', 'Líder de frota'], ['assistente', 'Assistente da líder (sem cadastros)'], ['gerente', 'Gerente'], ['admin', 'Administrador']];
 const NOME_PAPEL = Object.fromEntries(PAPEIS);
 $('p-papeis').innerHTML = PAPEIS.map(([k, n]) => `<label><input type="checkbox" value="${k}">${n}</label>`).join('');
+const usaCelular = p => p.papeis.some(x => CAMPO.includes(x));
+function situacaoPin(p) {
+  if (!p.re) return '<span class="mut">sem RE</span>';
+  if (p.pin_criado_em) return `<span class="pill ok">Criado em ${dataBr(p.pin_criado_em)}</span>`;
+  if (p.tem_pin) return '<span class="pill ok">Definido pela líder</span>';
+  return '<span class="pill cinza">Aguardando primeiro acesso</span>';
+}
 function renderCad() {
-  $('t-pessoas').innerHTML = PE.map(p => `<tr class="${p.ativo ? '' : 'inativo'}"><td><b>${esc(p.nome)}</b><br><small class="mut">${esc(p.funcao || '')}${p.email ? ' · ' + esc(p.email) : ''}</small></td><td class="num">${esc(p.re || '—')}</td><td>${p.papeis.map(x => `<span class="pill info" style="margin:1px">${esc((NOME_PAPEL[x] || x).split(' (')[0])}</span>`).join(' ')}</td><td>${p.papeis.some(x => x === 'porteiro' || x === 'mecanico') ? (p.tem_pin ? '<span class="pill ok">definido</span>' : '<span class="bad">sem PIN</span>') : ''}</td><td><button type="button" class="btn btn-sm btn-ghost" data-edp="${p.id}">Editar</button></td></tr>`).join('');
+  // quem usa o celular e está sem RE aparece primeiro, para a Fernanda completar
+  const ord = PE.slice().sort((a, b) => ((b.ativo && usaCelular(b) && !b.re) - (a.ativo && usaCelular(a) && !a.re)) || (b.ativo - a.ativo) || a.nome.localeCompare(b.nome));
+  const semRe = PE.filter(p => p.ativo && usaCelular(p) && !p.re).length;
+  $('pes-sub').innerHTML = semRe ? `<span class="bad">${semRe} ${semRe === 1 ? 'pessoa do celular está' : 'pessoas do celular estão'} sem RE</span>` : '';
+  $('t-pessoas').innerHTML = ord.map(p => `<tr class="${p.ativo ? '' : 'inativo'}"><td><b>${esc(p.nome)}</b><br><small class="mut">${esc(p.funcao || '')}${p.email ? ' · ' + esc(p.email) : ''}</small></td><td class="num">${p.re ? esc(p.re) : p.ativo ? '<span class="bad">falta RE</span>' : '—'}</td><td>${p.papeis.map(x => `<span class="pill info" style="margin:1px">${esc((NOME_PAPEL[x] || x).split(' (')[0])}</span>`).join(' ')}</td><td>${p.ativo && usaCelular(p) ? situacaoPin(p) : ''}</td><td><button type="button" class="btn btn-sm btn-ghost" data-edp="${p.id}">Editar</button></td></tr>`).join('');
   $('t-veics').innerHTML = VE.map(v => `<tr class="${v.ativo ? '' : 'inativo'}"><td><b>${esc(v.placa)}</b></td><td>${esc(v.modelo || '')}<br><small class="mut">${esc(v.tipo || '')}</small></td><td>${esc(v.categoria)}${v.garantia ? ' <span class="pill gar">Garantia</span>' : ''}</td><td class="r num">${v.intervalo_km ? fmt(v.intervalo_km) : '—'}</td><td>${v.frota_pesada ? 'Sim' : ''}</td><td><button type="button" class="btn btn-sm btn-ghost" data-edv="${esc(v.placa)}">Editar</button></td></tr>`).join('');
   const tipos = [['estabelecimento', 'Locais da troca'], ['oleo', 'Tipos de óleo'], ['funcao', 'Funções (motorista ou outro)']];
   $('listas').innerHTML = tipos.map(([t, n]) => `<div style="margin-bottom:14px"><b>${n}</b><div class="chips-lista">${LI.filter(l => l.tipo === t).map(l => `<span>${esc(l.valor)}<button type="button" data-rml="${t}" data-v="${esc(l.valor)}" aria-label="Remover ${esc(l.valor)}">×</button></span>`).join('')}</div><div class="linha-btn" style="margin-top:8px"><input id="nl-${t}" placeholder="Adicionar" style="padding:6px 8px;border-radius:6px;border:1.5px solid var(--line);background:var(--surface)"><button type="button" class="btn btn-sm btn-ghost" data-addl="${t}">Adicionar</button></div></div>`).join('');
@@ -364,9 +388,15 @@ function renderCad() {
 function abrirPessoa(p) {
   $('f-pessoa').hidden = false; $('p-msg').textContent = '';
   $('p-id').value = p ? p.id : ''; $('p-nome').value = p ? p.nome : ''; $('p-re').value = p ? p.re || '' : ''; $('p-funcao').value = p ? p.funcao || '' : ''; $('p-email').value = p ? p.email || '' : '';
-  $('p-ativo').checked = p ? p.ativo : true; $('p-pin').value = '';
+  $('p-ativo').checked = p ? p.ativo : true; $('p-zerar-conf').hidden = true;
   [...$('p-papeis').querySelectorAll('input')].forEach(i => { i.checked = p ? p.papeis.includes(i.value) : false; });
-  $('p-pin-box').hidden = !p; $('p-nome').focus();
+  pintaPinBox(p); $('p-nome').focus();
+}
+function pintaPinBox(p) {
+  $('p-pin-box').hidden = !p || !usaCelular(p);
+  if (!p) return;
+  $('p-pin-sit').innerHTML = situacaoPin(p);
+  $('p-pin-zerar').hidden = !p.tem_pin;
 }
 $('nova-pessoa').onclick = () => abrirPessoa(null);
 $('p-cancelar').onclick = () => { $('f-pessoa').hidden = true; };
@@ -376,13 +406,25 @@ $('f-pessoa').addEventListener('submit', async e => {
   try {
     const id = await rpc('painel_salvar_pessoa', { p_id: $('p-id').value || null, p_nome: $('p-nome').value, p_re: $('p-re').value, p_funcao: $('p-funcao').value,
       p_papeis: [...$('p-papeis').querySelectorAll('input:checked')].map(i => i.value), p_email: $('p-email').value, p_ativo: $('p-ativo').checked });
-    PE = await tudo('pessoas', 'nome', true, COLS_PESSOAS); renderCad(); $('p-id').value = id; $('p-pin-box').hidden = false;
-    $('p-msg').className = 'msg ok'; $('p-msg').textContent = 'Salvo. Para porteiro ou mecânico, defina o PIN abaixo.' + ($('p-email').value ? ' Para o painel, crie também o login desse e-mail no Supabase (veja o guia).' : '');
+    PE = await tudo('pessoas', 'nome', true, COLS_PESSOAS); renderCad(); renderOleo(); $('p-id').value = id;
+    const p = PE.find(x => x.id === id); pintaPinBox(p);
+    $('p-msg').className = 'msg ok';
+    $('p-msg').textContent = 'Salvo.' + (p && usaCelular(p) && !p.tem_pin ? ` No celular, a pessoa entra com o RE ${p.re} e cria o próprio PIN.` : '') + ($('p-email').value ? ' Para o painel, crie também o login desse e-mail no Supabase (veja o guia).' : '');
   } catch (err) { $('p-msg').className = 'msg erro'; $('p-msg').textContent = err.message; }
 });
-$('p-pin-salvar').onclick = async () => {
-  try { await rpc('painel_definir_pin', { p_pessoa: $('p-id').value, p_pin: $('p-pin').value }); $('p-pin').value = ''; $('p-msg').className = 'msg ok'; $('p-msg').textContent = 'PIN definido. Passe o PIN para a pessoa pessoalmente.'; }
+$('p-gerar').onclick = async () => {
+  if ($('p-re').value.trim() && !confirm('Trocar o RE digitado por um código gerado?')) return;
+  try { $('p-re').value = await rpc('painel_gerar_re'); $('p-msg').className = 'msg ok'; $('p-msg').textContent = 'Código gerado. Clique em Salvar e passe esse número para a pessoa: é o login dela no celular.'; }
   catch (err) { $('p-msg').className = 'msg erro'; $('p-msg').textContent = err.message; }
+};
+$('p-pin-zerar').onclick = () => { $('p-zerar-conf').hidden = false; };
+$('p-zerar-nao').onclick = () => { $('p-zerar-conf').hidden = true; };
+$('p-zerar-sim').onclick = async () => {
+  try {
+    await rpc('painel_zerar_pin', { p_pessoa: $('p-id').value });
+    PE = await tudo('pessoas', 'nome', true, COLS_PESSOAS); renderCad(); pintaPinBox(PE.find(x => x.id === $('p-id').value));
+    $('p-zerar-conf').hidden = true; $('p-msg').className = 'msg ok'; $('p-msg').textContent = 'PIN zerado. No próximo acesso, a pessoa digita o RE, confirma o nome e cria um PIN novo.';
+  } catch (err) { $('p-msg').className = 'msg erro'; $('p-msg').textContent = err.message; }
 };
 function abrirVeic(v) {
   $('f-veic').hidden = false; $('v-msg').textContent = '';
