@@ -251,7 +251,7 @@ const PCK = (() => {
     if ($('cad-ck')) return carregarCad();
     $('tab-cad').insertAdjacentHTML('beforeend', '<div id="cad-ck"></div>');
     // a assistente vê só os cadastros do checklist
-    if (!A.itens) [...$('tab-cad').children].forEach(n => { if (n.id !== 'cad-ck') n.hidden = true; });
+    if (!A.itens) [...$('tab-cad').children].forEach(n => { if (n.id !== 'cad-ck' && n.id !== 'cad-quadros') n.hidden = true; });
     carregarCad();
   }
   async function carregarCad() {
