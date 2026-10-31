@@ -10,7 +10,8 @@ const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleStri
 const real = n => n == null ? '—' : Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fdt = t => { t = new Date(t); const o = { day: '2-digit', month: '2-digit' }; if (t.getFullYear() !== new Date().getFullYear()) o.year = '2-digit'; return t.toLocaleDateString('pt-BR', o) + ' ' + t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
 const dataBr = t => new Date(t).toLocaleDateString('pt-BR');
-const curto = n => { if (!n) return '—'; const a = n.trim().split(/\s+/).map(w => w[0] + w.slice(1).toLowerCase()); return a.length > 1 ? a[0] + ' ' + a[a.length - 1] : a[0]; };
+// primeiro e último nome; Neto, Júnior, Filho e Sobrinho não contam como sobrenome
+const curto = n => { if (!n) return '—'; const a = n.trim().split(/\s+/).map(w => w[0] + w.slice(1).toLowerCase()); let u = a.length - 1; if (u > 1 && /^(neto|junior|júnior|jr|filho|sobrinho)$/i.test(a[u])) u--; return u > 0 ? a[0] + ' ' + a[u] : a[0]; };
 const ini = n => { const a = (n || '?').trim().split(/\s+/); return (a[0][0] + (a.length > 1 ? a[a.length - 1][0] : '')).toUpperCase(); };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

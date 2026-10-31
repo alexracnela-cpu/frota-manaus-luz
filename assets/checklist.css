@@ -173,3 +173,28 @@ tr.inativo td{opacity:.5}
 details.mine{display:grid;gap:6px}
 .nota{font-size:13px}
 #s-ck .fotos label.foto img{max-height:120px;object-fit:cover}
+
+/* painel: janela da folha e impressão */
+body.com-modal{overflow:hidden}
+body.fundo-pc>#ck-modal{position:fixed;z-index:60}
+#ck-modal .modal-barra .tema{border:1.5px solid rgba(255,255,255,.5);background:transparent;color:inherit;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600}
+.folha .fthumb{object-fit:cover}
+@media print{
+  @page{size:A4;margin:8mm}
+  html,body.com-modal{overflow:visible;background:#fff!important}
+  body.com-modal::before,body.com-modal::after{display:none!important}
+  body.fundo-pc>#ck-modal{position:static}
+  body.com-modal>*:not(#ck-modal){display:none!important}
+  body.com-modal #ck-modal{position:static;display:block;background:none;padding:0;overflow:visible}
+  body.com-modal .modal-barra{display:none!important}
+  body.com-modal .modal-caixa{width:auto}
+  .folha{padding:0 6mm 4mm}
+  .folha .ftopo,.folha .faixa{margin:0 -6mm}
+  .fcat,.fregs,.freg,.fdef,.fcards,table{break-inside:avoid}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+/* painel com 4 ou 5 abas: letra menor para caber */
+.tabs:has(>button:nth-of-type(4):not([hidden])){grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr))}
+.tabs:has(>button:nth-of-type(4):not([hidden]))>button{font-size:clamp(15px,1.4vw,21px);padding:14px 8px 18px;letter-spacing:.03em}
+.tabs:has(>button:nth-of-type(4):not([hidden])) .tab-l{gap:8px}
+.tabs:has(>button:nth-of-type(4):not([hidden])) .tab-l svg{width:24px;height:24px}

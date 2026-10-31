@@ -65,6 +65,7 @@ async function entrarPainel() {
   $('tab-btn-cad').hidden = !cadastra();
   $('th-corr').hidden = !opera();
   mostrar('painel'); await carregarTudo(); verUsoFotos();
+  if (typeof PCK !== 'undefined') await PCK.iniciar();   // checklist e escadas (painel-ck.js)
 }
 
 // busca todas as linhas de uma tabela (o Supabase entrega no máximo 1000 por vez)
