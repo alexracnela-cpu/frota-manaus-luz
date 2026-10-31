@@ -24,6 +24,7 @@ const PCK = (() => {
     const t = $('tabs');
     t.insertAdjacentHTML('beforeend', `<button type="button" data-t="ck" aria-pressed="false" id="tab-btn-ck" hidden><span class="tab-l">${SVG_LISTA}Checklist</span></button>
       <button type="button" data-t="esc" aria-pressed="false" id="tab-btn-esc" hidden><span class="tab-l">${SVG_ESC}Escadas</span></button>`);
+    t.appendChild($('tab-btn-cad'));   // Cadastros fica por último
     $('tab-cad').insertAdjacentHTML('afterend', '<div class="tab" id="tab-ck" hidden></div><div class="tab" id="tab-esc" hidden></div>');
     document.body.insertAdjacentHTML('beforeend', '<div id="ck-modal" class="modal" hidden></div>');
     t.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;

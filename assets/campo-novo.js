@@ -117,7 +117,7 @@ const MODS = ['abastecimento', 'oleo', 'checklist', 'autorizacoes', 'portaria', 
 function qtdAcessos() { return MODS.filter(m => eu[m]).length; }
 async function dentro(r) {
   const reDigitado = re;
-  token = r.token; eu = r; eu.re = reDigitado; re = ''; pin = ''; fase = 're'; pintaEntrada();
+  token = r.token; eu = r; eu.re = /^\d{1,2}$/.test(reDigitado) ? reDigitado.padStart(3, '0') : reDigitado; re = ''; pin = ''; fase = 're'; pintaEntrada();
   await abrirMenu(true);
 }
 async function atualizaEu() { Object.assign(eu, await rpc('campo_menu', { p_token: token })); }
