@@ -66,9 +66,14 @@ async function entrarPainel() {
   $('user-nome').textContent = curto(eu.nome); $('user-top').hidden = false;
   $('tab-btn-cad').hidden = !cadastra();
   $('th-corr').hidden = !opera();
-  mostrar('painel'); await carregarTudo(); verUsoFotos();
+  // as abas só aparecem quando todas estiverem prontas (checklist e escadas vêm do painel-ck.js)
+  $('tabs').style.visibility = 'hidden';
+  mostrar('painel');
+  const ck = typeof PCK !== 'undefined' ? PCK.iniciar().catch(() => {}) : Promise.resolve();
+  await Promise.all([carregarTudo(), ck]);
+  $('tabs').style.visibility = '';
+  verUsoFotos();
   if (falta09 && cadastra()) toast('Falta rodar o arquivo 09_login_re_pin.sql no Supabase para o login por RE funcionar.', true);
-  if (typeof PCK !== 'undefined') await PCK.iniciar();   // checklist e escadas (painel-ck.js)
 }
 
 // busca todas as linhas de uma tabela (o Supabase entrega no máximo 1000 por vez)
