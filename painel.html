@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="assets/estilo.css?v=5">
 <link rel="stylesheet" href="assets/checklist.css?v=2">
+<link rel="stylesheet" href="assets/relatorio.css?v=1">
 <style>
   .user-top{display:flex;align-items:center;gap:10px;color:var(--ink-fg);font-size:14px}
   .user-top b{font-weight:600}
@@ -159,6 +160,7 @@
         <div class="field"><label for="dto-de">De</label><input type="date" id="dto-de"></div>
         <div class="field"><label for="dto-ate">Até</label><input type="date" id="dto-ate"></div>
         <span class="mut" id="papel-d" style="padding-bottom:8px"></span>
+        <button type="button" class="btn btn-main btn-rel" id="abrir-rel" style="margin-left:auto;align-self:flex-end">RELATÓRIO FROTA PESADA</button>
       </div>
       <div class="kpis" id="kpis-o"></div>
       <div class="card" id="card-sit">
@@ -209,6 +211,7 @@
           <div class="card-h"><h2>Veículos</h2><button type="button" class="btn btn-sm btn-main" id="novo-veic">Novo veículo</button></div>
           <form class="form-cad" id="f-veic" hidden novalidate>
             <div class="two"><div class="field"><label for="v-placa">Placa</label><input id="v-placa" placeholder="ABC-1D23"></div><div class="field"><label for="v-modelo">Modelo</label><input id="v-modelo"></div></div>
+            <div class="two"><div class="field"><label for="v-fab">Fabricante</label><input id="v-fab" list="lista-fab" placeholder="Ex.: Volkswagen, Ford"><datalist id="lista-fab"><option>Volkswagen</option><option>Ford</option><option>Mercedes-Benz</option><option>Fiat</option><option>Chevrolet</option><option>Honda</option></datalist></div><div class="field"></div></div>
             <div class="two"><div class="field"><label for="v-cat">Categoria</label><select id="v-cat"><option>Pesado</option><option>Leve</option><option>Moto</option></select></div><div class="field"><label for="v-tipo">Tipo (ex.: Cesto aéreo 13m)</label><input id="v-tipo"></div></div>
             <div class="two"><div class="field"><label for="v-int">Troca de óleo a cada (km)</label><input id="v-int" class="num" inputmode="numeric"></div><div class="field"><label>&nbsp;</label><div class="papeis"><label><input type="checkbox" id="v-pesada">Abastece na portaria</label><label><input type="checkbox" id="v-gar">Em garantia</label><label><input type="checkbox" id="v-ativo" checked>Ativo</label></div></div></div>
             <div class="linha-btn"><button class="btn btn-sm btn-main" type="submit">Salvar</button><button class="btn btn-sm btn-ghost" type="button" id="v-cancelar">Cancelar</button></div>
@@ -240,7 +243,8 @@
 <script src="assets/config.js"></script>
 <script src="assets/comum.js?v=5"></script>
 <script src="assets/zip.js"></script>
-<script src="assets/painel.js?v=6"></script>
+<script src="assets/painel.js?v=7"></script>
+<script src="assets/relatorio.js?v=1"></script>
 <script src="assets/icones-ck.js?v=2"></script>
 <script src="assets/painel-ck.js?v=3"></script>
 </body>
