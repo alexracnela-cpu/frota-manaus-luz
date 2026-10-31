@@ -81,23 +81,29 @@ async function tudo(tabela, ordem, asc = true, cols = '*') {
   }
   return out;
 }
-async function carregarTudo() {
-  $('note').textContent = 'Carregando dados…';
+let assTudo = '';
+async function carregarTudo(silencioso) {
+  if (!silencioso) $('note').textContent = 'Carregando dados…';
   // antes de rodar o 09_login_re_pin.sql a coluna pin_criado_em não existe: usa a lista antiga
   if (!falta09) { try { await sb.from('pessoas').select(COLS_PESSOAS).limit(1).then(r => { if (r.error) throw r.error; }); }
     catch (e) { if (/pin_criado_em/.test(e.message || '')) { falta09 = true; COLS_PESSOAS = COLS_PESSOAS_ANT; } } }
+  let dados, kc;
   try {
-    [VE, PE, AB, PD, TR, LI] = await Promise.all([
+    dados = await Promise.all([
       tudo('veiculos', 'placa'), tudo('pessoas', 'nome', true, COLS_PESSOAS), tudo('abastecimentos', 'registrado_em'),
       tudo('pedidos_troca', 'id'), tudo('trocas_oleo', 'data'), tudo('listas', 'ordem')]);
-  } catch (e) { $('note').textContent = 'Não consegui carregar os dados: ' + e.message; return; }
-  try { KC = await rpc('painel_km_checklist') || {}; } catch (_) { KC = {}; }   // antes do 14_km_checklist.sql: só abastecimento e troca
+  } catch (e) { if (!silencioso) $('note').textContent = 'Não consegui carregar os dados: ' + e.message; return; }
+  try { kc = await rpc('painel_km_checklist') || {}; } catch (_) { kc = {}; }   // antes do 14_km_checklist.sql: só abastecimento e troca
+  // atualização automática: se nada mudou, não redesenha (evita a tela "piscar")
+  const ass = JSON.stringify([dados, kc]);
+  if (silencioso && ass === assTudo) return;
+  assTudo = ass; [VE, PE, AB, PD, TR, LI] = dados; KC = kc;
   AB.forEach(r => { r.t = new Date(r.registrado_em); r.l = r.litros == null ? 0 : Number(r.litros); });
   TR.forEach(r => { r.d = new Date(r.data); });
   analisar(); montarFiltros(); pintaDatas(); render(); renderOleo(); if (cadastra()) { renderCad(); renderFotos(); }
 }
 // recarrega os dados a cada 2 minutos, para ver o que a portaria lançou
-setInterval(() => { if (eu && document.visibilityState === 'visible' && !ocupadoFotos && !document.querySelector('.form-cad:not([hidden])')) carregarTudo(); }, 120000);
+setInterval(() => { if (eu && document.visibilityState === 'visible' && !ocupadoFotos && !document.querySelector('.form-cad:not([hidden])') && $('rel-o') && $('rel-o').hidden) carregarTudo(true); }, 120000);
 
 // ================= ABAS =================
 $('tabs').addEventListener('click', e => {

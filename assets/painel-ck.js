@@ -54,10 +54,16 @@ const PCK = (() => {
   const thumb = (p, w = 58, h = 42) => p && urls[p] ? `<a href="${urls[p]}" target="_blank" rel="noopener"><img class="fthumb" src="${urls[p]}" alt="Foto" style="width:${w}px;height:${h}px;object-fit:cover"></a>` : p ? `<span class="fthumb" style="width:${w}px;height:${h}px;font-size:9px">${arq ? 'ARQUIVADA' : 'FOTO'}</span>` : '';
 
   // =================== ABA CHECKLIST ===================
-  async function carregarCk() {
-    $('tab-ck').innerHTML = '<p class="note">Carregando…</p>';
-    try { F = await rpc('painel_ck_frota'); await assinarFotos([...fotosDe(F.atencao), ...fotosDe(F.avarias), ...fotosDe(F.autorizacoes)]); }
-    catch (e) { $('tab-ck').innerHTML = `<div class="alert">${esc(e.message)}</div>`; return; }
+  // silencioso = atualização automática: não apaga a tela e só redesenha se algo mudou
+  let assF = '', assE = '';
+  async function carregarCk(silencioso) {
+    if (!silencioso) $('tab-ck').innerHTML = '<p class="note">Carregando…</p>';
+    let novo;
+    try { novo = await rpc('painel_ck_frota'); }
+    catch (e) { if (!silencioso) $('tab-ck').innerHTML = `<div class="alert">${esc(e.message)}</div>`; return; }
+    const a = JSON.stringify(novo); if (silencioso && a === assF) return;
+    assF = a; F = novo;
+    try { await assinarFotos([...fotosDe(F.atencao), ...fotosDe(F.avarias), ...fotosDe(F.autorizacoes)]); } catch (_) {}
     if (!res) await buscar();
     pintaCk();
   }
@@ -191,10 +197,14 @@ const PCK = (() => {
   function fecharModal() { $('ck-modal').hidden = true; document.body.classList.remove('com-modal'); }
 
   // =================== ABA ESCADAS ===================
-  async function carregarEsc() {
-    $('tab-esc').innerHTML = '<p class="note">Carregando…</p>';
-    try { E = await rpc('painel_esc_dados'); await assinarFotos(fotosDe(E.pendentes)); if (!resE) await buscarE(); }
-    catch (e) { $('tab-esc').innerHTML = `<div class="alert">${esc(e.message)}</div>`; return; }
+  async function carregarEsc(silencioso) {
+    if (!silencioso) $('tab-esc').innerHTML = '<p class="note">Carregando…</p>';
+    let novo;
+    try { novo = await rpc('painel_esc_dados'); }
+    catch (e) { if (!silencioso) $('tab-esc').innerHTML = `<div class="alert">${esc(e.message)}</div>`; return; }
+    const a = JSON.stringify(novo); if (silencioso && a === assE) return;
+    assE = a; E = novo;
+    try { await assinarFotos(fotosDe(E.pendentes)); if (!resE) await buscarE(); } catch (_) {}
     pintaEsc();
   }
   async function buscarE() {
@@ -382,7 +392,7 @@ const PCK = (() => {
     $('ck-modal').addEventListener('click', e => { if (e.target.id === 'ck-modal') fecharModal(); });
   }
   montarAbas(); ligar();
-  return { iniciar, atualizar: () => { if (!$('tab-ck').hidden) carregarCk(); if (!$('tab-esc').hidden) carregarEsc(); } };
+  return { iniciar, atualizar: () => { if (!$('tab-ck').hidden) carregarCk(true); if (!$('tab-esc').hidden) carregarEsc(true); } };
 })();
 
 // se o login terminou antes deste arquivo carregar, liga o checklist agora
