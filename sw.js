@@ -14,15 +14,19 @@ self.addEventListener('push', e => {
   }));
 });
 
-// tocar no aviso abre o app (ou traz para frente) na tela certa
+// tocar no aviso: se o app já está aberto, só traz para frente e avisa a tela (sem recarregar);
+// se está fechado, abre o app pela página inicial do ícone (index.html)
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  const destino = (e.notification.data && e.notification.data.url) || './';
+  const hash = destino.includes('#') ? destino.slice(destino.indexOf('#')) : '';
+  const painel = destino.includes('painel.html');
   e.waitUntil((async () => {
     const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const w of janelas) {
-      try { await w.focus(); if (w.url !== url && 'navigate' in w) await w.navigate(url); return; } catch (_) {}
+    const app = janelas.find(w => !w.url.includes('painel.html'));
+    if (app && !painel) {
+      try { await app.focus(); app.postMessage({ fleet: 'aviso', hash }); return; } catch (_) {}
     }
-    await self.clients.openWindow(url);
+    await self.clients.openWindow(new URL(painel ? 'painel.html' : 'index.html' + hash, self.registration.scope).href);
   })());
 });

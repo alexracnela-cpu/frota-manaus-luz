@@ -369,7 +369,7 @@ const instalado = () => window.matchMedia('(display-mode: standalone)').matches 
 const temPush = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 const CHAVE_TIPOS = 'fleet_avisos';
 let swReg = null, opcoesN = null;
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js?v=2').then(r => { swReg = r; }).catch(() => {});
 function leTipos() { try { return JSON.parse(localStorage.getItem(CHAVE_TIPOS) || 'null'); } catch (_) { return null; } }
 function salvaTipos(t) { try { if (t) localStorage.setItem(CHAVE_TIPOS, JSON.stringify(t)); else localStorage.removeItem(CHAVE_TIPOS); } catch (_) {} }
 function bytesDaChave(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
@@ -423,6 +423,13 @@ async function abrirNotif() {
   $('n-teste').hidden = $('n-desativar').hidden = !ativo;
 }
 $('m-notif').onclick = abrirNotif;
+// o app já estava aberto e a pessoa tocou num aviso
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
+  if (!e.data || e.data.fleet !== 'aviso') return;
+  if (!token) { if (leLogin()) retomarLogin(); return; }
+  if (e.data.hash) { history.replaceState(null, '', location.pathname + e.data.hash); abrirPeloAviso(); }
+  else if (!$('s-menu').hidden || !$('s-notif').hidden) abrirMenu(false);
+});
 $('n-voltar').onclick = () => abrirMenu(false);
 $('n-ativar').onclick = async () => {
   $('n-err').textContent = '';
