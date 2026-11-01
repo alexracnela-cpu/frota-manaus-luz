@@ -13,8 +13,8 @@ let tSaida = null, tInativo = null;
 let lembrado = false;               // login salvo neste celular (celular pessoal)
 const CHAVE_LEMBRAR = 'fleet_login';
 
-const telas = ['s-config', 's-inicio', 's-primeiro', 's-criar', 's-menu', 's-form', 's-oleo', 's-oleo-form', 's-ck', 's-done'];
-const COM_FUNDO = ['s-inicio', 's-primeiro', 's-criar', 's-menu', 's-form', 's-ck'];
+const telas = ['s-config', 's-inicio', 's-primeiro', 's-criar', 's-menu', 's-form', 's-oleo', 's-oleo-form', 's-ck', 's-done', 's-notif'];
+const COM_FUNDO = ['s-inicio', 's-primeiro', 's-criar', 's-menu', 's-form', 's-ck', 's-notif'];
 function tela(id) {
   telas.forEach(s => $(s).hidden = s !== id);
   $('tema').hidden = !['s-inicio', 's-menu', 's-config'].includes(id);   // botão Modo claro/escuro só na entrada e no menu
@@ -27,7 +27,8 @@ function carregando(on, t) { $('carregando').hidden = !on; if (t) $('carregando-
 
 $('ic-ab').innerHTML = ICONE_BOMBA; $('ic-ol').innerHTML = ICONE_GOTA;
 $('ic-ck').innerHTML = ICK.lista; $('ic-aut').innerHTML = ICK.chave; $('ic-port').innerHTML = ICK.cancela; $('ic-blq').innerHTML = ICK.bloq;
-['cr-voltar', 'o-voltar', 'oleo-menu'].forEach(id => $(id).innerHTML = ICONE_VOLTAR + 'Voltar');
+['cr-voltar', 'o-voltar', 'oleo-menu', 'n-voltar'].forEach(id => $(id).innerHTML = ICONE_VOLTAR + 'Voltar');
+$('ic-notif').innerHTML = ICONE_SINO;
 
 // ---------- teclado numérico ----------
 function montaPad(el, acao, fn) {
@@ -124,7 +125,7 @@ async function dentro(r) {
   token = r.token; eu = r; eu.re = /^\d{1,2}$/.test(reDigitado) ? reDigitado.padStart(3, '0') : reDigitado; re = ''; pin = ''; fase = 're'; pintaEntrada();
   lembrado = false;
   if ($('lembrar').checked) {
-    try { const ate = await rpc('campo_lembrar', { p_token: token }); salvaLogin({ token, re: eu.re, ate }); lembrado = true; }
+    try { const ate = await rpc('campo_lembrar', { p_token: token }); salvaLogin({ token, re: eu.re, ate }); lembrado = true; reinscrever(); }
     catch (_) { /* se o banco ainda não tem a função, entra normal */ }
   }
   $('lembrar').checked = false;
@@ -146,6 +147,9 @@ async function abrirMenu(direto) {
   $('m-ol-etq').textContent = !eu.oleo_qtd ? '' : eu.mecanico ? `${eu.oleo_qtd} ${eu.oleo_qtd === 1 ? 'veículo aprovado' : 'veículos aprovados'}` : `${eu.oleo_qtd === 1 ? '1 veículo autorizado' : eu.oleo_qtd + ' veículos autorizados'} para você`;
   $('m-ol-etq').hidden = !eu.oleo_qtd;
   $('m-vazio').hidden = qtdAcessos() > 0; $('m-mods').hidden = qtdAcessos() === 0;
+  const d = lembrado && leLogin();
+  $('m-sai').textContent = d && d.ate ? 'Conectado neste celular até ' + dataBr(d.ate) : 'Sai sozinho em 2 minutos sem uso';
+  pintaSino();
   tela('s-menu');
 }
 function papeisTxt() {
@@ -180,7 +184,7 @@ async function retomarLogin() {
   try {
     const r = await rpc('campo_menu', { p_token: d.token });
     token = d.token; eu = r; eu.re = d.re; lembrado = true;
-    await abrirMenu(true); return true;
+    await abrirMenu(true); abrirPeloAviso(); return true;
   } catch (_) { apagaLogin(); token = null; eu = null; lembrado = false; return false; }
   finally { carregando(false); }
 }
@@ -358,3 +362,106 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 iniciarTema();
 if (!configurado) tela('s-config');
 else { limparEntrada(); tela('s-inicio'); retomarLogin(); }
+
+// ---------- notificações (Web Push) ----------
+const ehIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const instalado = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const temPush = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const CHAVE_TIPOS = 'fleet_avisos';
+let swReg = null, opcoesN = null;
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
+function leTipos() { try { return JSON.parse(localStorage.getItem(CHAVE_TIPOS) || 'null'); } catch (_) { return null; } }
+function salvaTipos(t) { try { if (t) localStorage.setItem(CHAVE_TIPOS, JSON.stringify(t)); else localStorage.removeItem(CHAVE_TIPOS); } catch (_) {} }
+function bytesDaChave(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+const mesmaChave = (a, b) => { if (!a || !b) return false; a = new Uint8Array(a); if (a.length !== b.length) return false; return a.every((x, i) => x === b[i]); };
+async function registroSW() { return swReg || await navigator.serviceWorker.ready; }
+async function assinaturaAtual() { if (!temPush()) return null; try { return await (await registroSW()).pushManager.getSubscription(); } catch (_) { return null; } }
+const aparelho = () => ehIOS ? 'iPhone' : /Android/i.test(navigator.userAgent) ? 'Android' : 'Navegador';
+async function inscrever(sub, tipos) {
+  const j = sub.toJSON();
+  return rpc('campo_push_inscrever', { p_token: token, p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_tipos: tipos, p_aparelho: aparelho() });
+}
+// depois de entrar de novo com "Manter conectado", liga os avisos de novo sem perguntar
+async function reinscrever() {
+  try {
+    if (!temPush() || Notification.permission !== 'granted') return;
+    const sub = await assinaturaAtual(), tipos = leTipos();
+    if (sub && tipos && tipos.length) await inscrever(sub, tipos);
+  } catch (_) {}
+}
+async function pintaSino() {
+  const sub = lembrado ? await assinaturaAtual() : null;
+  const on = !!sub && temPush() && Notification.permission === 'granted' && !!(leTipos() || []).length;
+  $('m-notif-etq').textContent = on ? 'Ativadas' : 'Desligadas'; $('m-notif').classList.toggle('on', on);
+}
+// tocar num aviso abre a tela certa
+function abrirPeloAviso() {
+  const h = location.hash; if (!h) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  if (h === '#aut' && eu && eu.autorizacoes) abrirModulo('autorizacoes');
+  else if (h === '#blq' && eu && eu.bloqueados) abrirModulo('bloqueados');
+}
+function avisoN(html) { $('n-aviso').innerHTML = html || ''; $('n-aviso').hidden = !html; }
+async function abrirNotif() {
+  tela('s-notif'); $('n-err').textContent = ''; $('n-lista').innerHTML = ''; avisoN('');
+  ['n-ativar', 'n-teste', 'n-desativar'].forEach(id => $(id).hidden = true);
+  if (ehIOS && !instalado()) return avisoN('<b>Abra o FLEET pelo ícone da Tela de Início.</b><span>No Safari, toque em Compartilhar e em Adicionar à Tela de Início. Depois abra o FLEET pelo ícone e volte aqui.</span>');
+  if (!temPush()) return avisoN('<b>Este celular não recebe notificações por aqui.</b><span>No iPhone, use o app pela Tela de Início (iOS 16.4 ou mais novo). No Android, use o Chrome.</span>');
+  if (!lembrado) return avisoN('<b>Os avisos só funcionam no seu celular pessoal.</b><span>Toque em Voltar e em Sair. Depois entre de novo marcando "Manter conectado neste celular".</span>');
+  carregando(true, 'Abrindo…');
+  try { opcoesN = await rpc('campo_push_opcoes', { p_token: token }); }
+  catch (e) { $('n-err').textContent = e.message; return; }
+  finally { carregando(false); }
+  if (!opcoesN.tipos.length) return avisoN('<b>Nenhum aviso disponível para o seu cadastro.</b>');
+  const sub = await assinaturaAtual(), salvos = leTipos();
+  const ativo = !!sub && Notification.permission === 'granted' && !!salvos;
+  const marcados = salvos || opcoesN.tipos.map(t => t.tipo);
+  $('n-lista').innerHTML = opcoesN.tipos.map(t => `<label class="n-item"><input type="checkbox" value="${esc(t.tipo)}"${marcados.includes(t.tipo) ? ' checked' : ''}><span><b>${esc(t.nome)}</b><small>${esc(t.desc)}</small></span></label>`).join('');
+  if (Notification.permission === 'denied') return avisoN('<b>As notificações do FLEET estão bloqueadas neste celular.</b><span>No iPhone: Ajustes → Notificações → FLEET → ligue Permitir Notificações. Depois volte aqui.</span>');
+  avisoN(ativo ? '<b class="ok">Ativadas neste celular.</b><span>Para mudar, marque ou desmarque e toque em Salvar.</span>' : '');
+  $('n-ativar').textContent = ativo ? 'Salvar' : 'Ativar notificações'; $('n-ativar').hidden = false;
+  $('n-teste').hidden = $('n-desativar').hidden = !ativo;
+}
+$('m-notif').onclick = abrirNotif;
+$('n-voltar').onclick = () => abrirMenu(false);
+$('n-ativar').onclick = async () => {
+  $('n-err').textContent = '';
+  const tipos = [...$('n-lista').querySelectorAll('input:checked')].map(i => i.value);
+  if (!tipos.length) { $('n-err').textContent = 'Marque pelo menos um aviso, ou toque em Desativar neste celular.'; return; }
+  // o pedido de permissão precisa vir direto do toque (regra do iPhone)
+  let perm = Notification.permission;
+  if (perm !== 'granted') { try { perm = await Notification.requestPermission(); } catch (_) {} }
+  if (perm !== 'granted') { $('n-err').textContent = 'Sem permissão, o celular não mostra os avisos. Toque em Ativar de novo e escolha Permitir.'; if (perm === 'denied') abrirNotif(); return; }
+  carregando(true, 'Ativando…');
+  try {
+    if (!opcoesN.publica) opcoesN = await rpc('campo_push_opcoes', { p_token: token });
+    if (!opcoesN.publica) throw new Error('As notificações ainda estão sendo preparadas no servidor. Espere alguns segundos e tente de novo.');
+    const chave = bytesDaChave(opcoesN.publica), reg = await registroSW();
+    let sub = await reg.pushManager.getSubscription();
+    if (sub && !mesmaChave(sub.options && sub.options.applicationServerKey, chave)) { await sub.unsubscribe(); sub = null; }
+    if (!sub) {
+      try { sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave }); }
+      catch (_) { throw new Error('O celular não aceitou os avisos agora. Confira a internet, feche e abra o FLEET pelo ícone e tente de novo.'); }
+    }
+    const r = await inscrever(sub, tipos);
+    salvaTipos(r.tipos || tipos);
+    await abrirNotif();
+  } catch (e) { $('n-err').textContent = e.message || 'Não deu para ativar. Tente de novo.'; }
+  finally { carregando(false); }
+};
+$('n-teste').onclick = async () => {
+  $('n-err').textContent = '';
+  try {
+    const ok = await rpc('campo_push_teste', { p_token: token });
+    avisoN(ok ? '<b class="ok">Aviso de teste enviado.</b><span>Deve aparecer na tela em alguns segundos. Se não chegar, toque em Desativar e ative de novo.</span>'
+              : '<b>Nenhum celular ativo para receber.</b><span>Toque em Ativar notificações.</span>');
+  } catch (e) { $('n-err').textContent = e.message; }
+};
+$('n-desativar').onclick = async () => {
+  carregando(true, 'Desativando…');
+  try {
+    const sub = await assinaturaAtual();
+    if (sub) { const ep = sub.endpoint; await sub.unsubscribe(); try { await rpc('campo_push_remover', { p_token: token, p_endpoint: ep }); } catch (_) {} }
+    salvaTipos(null); await abrirNotif();
+  } finally { carregando(false); }
+};

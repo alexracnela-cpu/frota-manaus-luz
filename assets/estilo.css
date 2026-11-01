@@ -309,3 +309,19 @@ body.fundo-pc .card,body.fundo-pc .kpi{box-shadow:0 4px 18px rgba(11,40,90,.08)}
 .lembrar b{font-weight:600;color:var(--fg)}
 .lembrar small{font-size:13px;color:var(--muted)}
 .lembrar:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+
+/* Notificações (menu e tela) */
+.n-menu{display:flex;align-items:center;justify-content:center;gap:10px}
+.n-menu .n-estado{font-size:13px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+.n-menu.on .n-estado{color:var(--ok);border-color:var(--ok)}
+.n-aviso{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:12px;background:var(--amb-soft);border:1px solid var(--amb);color:var(--fg)}
+.n-aviso span{font-size:14px;color:var(--muted)}
+.n-aviso .ok{color:var(--ok)}
+.n-aviso:has(.ok){background:var(--surface);border-color:var(--ok)}
+.n-lista{display:flex;flex-direction:column;gap:8px}
+.n-item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer}
+.n-item input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
+.n-item span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.n-item b{font-weight:600;color:var(--fg)}
+.n-item small{font-size:13px;color:var(--muted)}
+.n-item:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
