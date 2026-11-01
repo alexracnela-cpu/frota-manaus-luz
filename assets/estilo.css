@@ -301,3 +301,11 @@ body.fundo-pc .card,body.fundo-pc .kpi{box-shadow:0 4px 18px rgba(11,40,90,.08)}
 .ola .av{width:46px;height:46px;font-size:18px}
 .mod .etq{display:inline-block;margin-top:8px;font-size:13px;font-weight:600;background:var(--amb-soft);color:var(--amb);border-radius:6px;padding:3px 10px}
 .screen.fundo .pane>div>h2,.screen.fundo .pane>div>.who,.screen.fundo .ola h2,.screen.fundo .ola .who{text-shadow:0 0 6px var(--fundo-c),0 0 12px var(--fundo-c)}
+
+/* "Manter conectado neste celular" (tela de entrada, junto do PIN) */
+.lembrar{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;text-align:left}
+.lembrar input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
+.lembrar span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.lembrar b{font-weight:600;color:var(--fg)}
+.lembrar small{font-size:13px;color:var(--muted)}
+.lembrar:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}

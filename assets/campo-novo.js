@@ -10,6 +10,8 @@ let token = null, eu = null, modulo = null;  // eu = nome, função e acessos de
 let dadosAb = null, dadosOl = null, pedidoSel = null;
 let fotos = {};
 let tSaida = null, tInativo = null;
+let lembrado = false;               // login salvo neste celular (celular pessoal)
+const CHAVE_LEMBRAR = 'fleet_login';
 
 const telas = ['s-config', 's-inicio', 's-primeiro', 's-criar', 's-menu', 's-form', 's-oleo', 's-oleo-form', 's-ck', 's-done'];
 const COM_FUNDO = ['s-inicio', 's-primeiro', 's-criar', 's-menu', 's-form', 's-ck'];
@@ -120,12 +122,18 @@ function qtdAcessos() { return MODS.filter(m => eu[m]).length; }
 async function dentro(r) {
   const reDigitado = re;
   token = r.token; eu = r; eu.re = /^\d{1,2}$/.test(reDigitado) ? reDigitado.padStart(3, '0') : reDigitado; re = ''; pin = ''; fase = 're'; pintaEntrada();
+  lembrado = false;
+  if ($('lembrar').checked) {
+    try { const ate = await rpc('campo_lembrar', { p_token: token }); salvaLogin({ token, re: eu.re, ate }); lembrado = true; }
+    catch (_) { /* se o banco ainda não tem a função, entra normal */ }
+  }
+  $('lembrar').checked = false;
   await abrirMenu(true);
 }
 async function atualizaEu() { Object.assign(eu, await rpc('campo_menu', { p_token: token })); }
 async function abrirMenu(direto) {
   if (!direto) { try { await atualizaEu(); } catch (e) { return sairUsuario(); } }
-  if (direto && qtdAcessos() === 1) return abrirModulo(MODS.find(m => eu[m]));
+  if (direto && qtdAcessos() === 1 && !lembrado) return abrirModulo(MODS.find(m => eu[m]));
   $('m-av').textContent = ini(eu.nome); $('m-ola').textContent = 'Olá, ' + curto(eu.nome).split(' ')[0];
   $('m-funcao').textContent = papeisTxt();
   $('m-ab').hidden = !eu.abastecimento; $('m-ol').hidden = !eu.oleo;
@@ -158,24 +166,49 @@ async function abrirModulo(m) {
   finally { carregando(false); }
 }
 // volta ao menu, ou sai se a pessoa só tem uma opção
-function voltarMenu() { if (qtdAcessos() > 1) abrirMenu(false); else sairUsuario(); }
+function voltarMenu() { if (qtdAcessos() > 1 || lembrado) abrirMenu(false); else sairUsuario(); }
+
+// ---------- login salvo neste celular ----------
+function salvaLogin(d) { try { localStorage.setItem(CHAVE_LEMBRAR, JSON.stringify(d)); } catch (_) {} }
+function leLogin() { try { return JSON.parse(localStorage.getItem(CHAVE_LEMBRAR) || 'null'); } catch (_) { return null; } }
+function apagaLogin() { try { localStorage.removeItem(CHAVE_LEMBRAR); } catch (_) {} }
+// abre direto o menu de quem marcou "Manter conectado"; se a sessão acabou, mostra a entrada normal
+async function retomarLogin() {
+  const d = leLogin();
+  if (!d || !d.token || (d.ate && new Date(d.ate) <= new Date())) { apagaLogin(); return false; }
+  carregando(true, 'Entrando…');
+  try {
+    const r = await rpc('campo_menu', { p_token: d.token });
+    token = d.token; eu = r; eu.re = d.re; lembrado = true;
+    await abrirMenu(true); return true;
+  } catch (_) { apagaLogin(); token = null; eu = null; lembrado = false; return false; }
+  finally { carregando(false); }
+}
+// depois de um registro: quem está salvo volta ao menu; os outros saem
+function encerrarUso() { if (lembrado && token) abrirMenu(false); else sairUsuario(); }
 
 // ---------- saída automática ----------
 async function sairUsuario() {
   clearInterval(tSaida); clearTimeout(tInativo);
+  lembrado = false; apagaLogin();
   if (typeof CK !== 'undefined' && eu) CK.guardar('saiu');
   if (token) { const t = token; token = null; try { await rpc('campo_sair', { p_token: t }); } catch (_) {} }
   eu = null; dadosAb = null; dadosOl = null; primeiro = null; limparEntrada();
   tela('s-inicio');
 }
-function inativo() { clearTimeout(tInativo); if (token) tInativo = setTimeout(sairUsuario, typeof CK !== 'undefined' && CK.ativo() ? SAIDA_INATIVO_CK : SAIDA_INATIVO); }
+function inativo() { clearTimeout(tInativo); if (token && !lembrado) tInativo = setTimeout(sairUsuario, typeof CK !== 'undefined' && CK.ativo() ? SAIDA_INATIVO_CK : SAIDA_INATIVO); }
 document.addEventListener('pointerdown', inativo); document.addEventListener('input', inativo);
 function contagem() {
   clearInterval(tSaida); let s = SAIDA_APOS_REGISTRO;
-  const f = () => { $('saida').textContent = `Saindo automaticamente em ${s} s para o próximo`; if (s-- <= 0) sairUsuario(); };
+  $('sair2').textContent = lembrado ? 'Voltar ao menu' : 'Sair agora';
+  const f = () => {
+    $('saida').textContent = lembrado ? `Voltando ao menu em ${s} s` : `Saindo automaticamente em ${s} s para o próximo`;
+    if (s-- <= 0) encerrarUso();
+  };
   f(); tSaida = setInterval(f, 1000);
 }
-['sair', 'sair2', 'sair-oleo'].forEach(id => $(id).onclick = sairUsuario);
+['sair', 'sair-oleo'].forEach(id => $(id).onclick = sairUsuario);
+$('sair2').onclick = encerrarUso;
 $('oleo-menu').onclick = voltarMenu;
 $('o-voltar').onclick = () => { if (dadosOl && dadosOl.pedidos.length > 1) abrirListaOleo(); else voltarMenu(); };
 $('novo').onclick = async () => {
@@ -218,7 +251,7 @@ function abrirFormAb() {
   $('f-mot').innerHTML = '<option value="">Escolha o motorista</option>' + dadosAb.motoristas.map(m => `<option value="${esc(m.id)}">${esc(m.nome)}</option>`).join('');
   $('agora').textContent = 'Data e hora: ' + new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) + ' (automático)';
   $('sair').textContent = qtdAcessos() > 1 ? 'Menu' : 'Sair';
-  $('sair').onclick = qtdAcessos() > 1 ? () => abrirMenu(false) : sairUsuario;
+  $('sair').onclick = qtdAcessos() > 1 || lembrado ? () => abrirMenu(false) : sairUsuario;
   tela('s-form');
 }
 let pendente = false;
@@ -273,7 +306,7 @@ async function abrirListaOleo() {
   $('lista-apr').innerHTML = ps.length ? ps.map(x => `<button type="button" class="aprov" data-id="${x.id}"><span><b>${esc(x.placa)}</b><small>${esc(x.modelo || '')} · ${esc(x.categoria)}</small></span><span class="pill info">${x.autorizado ? 'Autorizado' : 'Aprovado'}</span><small class="aprov-d">Aprovado em ${dataBr(x.aprovado_em)}${x.km_atual ? ` · km atual ${fmt(x.km_atual)}` : ''}</small></button>`).join('')
     : `<div class="vazio"><b>${eu.mecanico ? 'Nenhum veículo aprovado agora' : 'Nenhum veículo autorizado para você agora'}</b><span>${eu.mecanico ? 'Quando o Carlos aprovar uma troca, o veículo aparece aqui.' : 'Peça para a Fernanda autorizar a troca no painel.'}</span></div>`;
   $('sair-oleo').textContent = qtdAcessos() > 1 ? 'Menu' : 'Sair';
-  $('sair-oleo').onclick = qtdAcessos() > 1 ? () => abrirMenu(false) : sairUsuario;
+  $('sair-oleo').onclick = qtdAcessos() > 1 || lembrado ? () => abrirMenu(false) : sairUsuario;
   tela('s-oleo');
 }
 $('lista-apr').addEventListener('click', e => { const b = e.target.closest('.aprov'); if (!b) return; pedidoSel = dadosOl.pedidos.find(x => x.id === +b.dataset.id); abrirFormOleo(); });
@@ -319,6 +352,9 @@ $('o-form').addEventListener('submit', async e => {
 // mantém a tela acesa na portaria, quando o aparelho permitir
 async function telaAcesa() { try { if ('wakeLock' in navigator && document.visibilityState === 'visible') await navigator.wakeLock.request('screen'); } catch (_) {} }
 document.addEventListener('visibilitychange', telaAcesa); telaAcesa();
+// celular pessoal: ao voltar para o app, atualiza o menu (contadores) ou pede o login de novo se a sessão acabou
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && lembrado && token && !$('s-menu').hidden) abrirMenu(false); });
 
 iniciarTema();
-if (!configurado) tela('s-config'); else { limparEntrada(); tela('s-inicio'); }
+if (!configurado) tela('s-config');
+else { limparEntrada(); tela('s-inicio'); retomarLogin(); }
