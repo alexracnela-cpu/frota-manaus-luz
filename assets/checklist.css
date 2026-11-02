@@ -202,3 +202,28 @@ body.fundo-pc>#ck-modal{position:fixed;z-index:60}
 /* celular: botão Modo claro/escuro (tela inicial e menu) */
 .tema-cel{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;z-index:5;color:var(--fg);background:var(--surface);border-color:var(--line);box-shadow:0 2px 8px rgba(11,40,90,.12);font-size:13px;padding:6px 10px}
 .tema-cel:hover{background:var(--sunk)}
+
+/* lançar checklist do papel (painel) */
+.papel{background:var(--bg);padding:14px;border-radius:0 0 10px 10px;display:grid;gap:12px}
+.papel .card{margin:0}
+.pp-aviso{background:var(--amb-soft);color:var(--fg);border-left:4px solid var(--amb);border-radius:8px;padding:10px 12px;font-size:14px}
+.pp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.pp-grid .field input,.pp-grid .field select,.papel .field textarea{padding:9px 10px;font-size:15px;border-radius:8px}
+.pp-sec{font:700 14px var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:12px 0 4px}
+.pp-it{display:flex;align-items:center;gap:8px 12px;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pp-it>.pp-n{flex:1 1 200px}
+.pp-it .crit{font-size:10px;font-weight:700;color:var(--warn);letter-spacing:.05em;margin-left:6px}
+.pp-it input{flex:1 1 100%;padding:7px 10px;border-radius:8px;border:1.5px solid var(--warn);background:var(--surface);font-size:14px}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+.seg button{border:0;background:var(--surface);color:var(--fg);padding:6px 12px;font:700 14px var(--f-mono);cursor:pointer;min-width:46px}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.seg button.m[aria-pressed=true]{background:var(--warn);color:#fff}
+.pp-qtd{display:grid;grid-template-columns:1fr 90px 90px;gap:6px 10px;align-items:center;max-width:420px}
+.pp-qtd input{padding:8px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);text-align:center;font-family:var(--f-mono);font-size:15px}
+.pp-qtd small{font-weight:700;text-transform:uppercase;font-size:11px;color:var(--muted);text-align:center}
+.pp-av{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.pp-av select,.pp-av input{padding:8px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);font-size:14px}
+.pp-pe{font-size:12px;margin-top:2px}
+.pp-rod{display:flex;justify-content:flex-end;gap:8px;align-items:center;flex-wrap:wrap}
+.tag-papel{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--amb-soft);color:var(--amb);white-space:nowrap}

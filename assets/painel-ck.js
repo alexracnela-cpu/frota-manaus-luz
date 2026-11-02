@@ -13,6 +13,11 @@ const PCK = (() => {
   const tag = s => `<span class="pill ${SIT[s][1]}">${SIT[s][0]}</span>`;
   const dt = t => t ? fdt(t) : '—';
   const ruim = v => !!v && v !== 'C' && v !== 'NA';
+  const LOCAIS = ['Capô', 'Para-choque dianteiro', 'Para-choque traseiro', 'Para-lama dianteiro esquerdo', 'Para-lama dianteiro direito',
+    'Para-lama traseiro esquerdo', 'Para-lama traseiro direito', 'Porta dianteira esquerda', 'Porta dianteira direita', 'Porta traseira esquerda',
+    'Porta traseira direita', 'Porta-malas / caçamba', 'Teto', 'Retrovisor esquerdo', 'Retrovisor direito', 'Para-brisa', 'Vidro lateral',
+    'Farol / lanterna', 'Cabine (pesados)', 'Carroceria / baú', 'Cesto / lança (pesados)', 'Tanque (moto)', 'Carenagem (moto)', 'Outro'];
+  const OPC = { STD: ['C', 'NC', 'NA'], LAT: ['C', 'R', 'A'], EXT: ['C', 'R', 'Q'] };
 
   let A = null, F = null, E = null, CAD = null, PP = [], AUD = null;
   let ordem = 'sit', busca = { offset: 0 }, buscaE = { offset: 0 }, res = null, resE = null, rec = null, enc = null, dq = null, excl = null;
@@ -120,7 +125,7 @@ const PCK = (() => {
   }
   function cardBusca() {
     const b = busca;
-    return `<div class="card"><div class="card-h"><h2>Buscar checklist</h2><span class="sub">Para consultar ou imprimir um checklist antigo</span></div>
+    return `<div class="card"><div class="card-h"><h2>Buscar checklist</h2><span class="sub">Para consultar ou imprimir um checklist antigo</span>${A.opera ? '<button type="button" class="btn btn-sm btn-main" data-a="papel" style="margin-left:auto">Lançar checklist do papel</button>' : ''}</div>
       <div class="filters" style="margin-bottom:12px"><div class="field" style="flex:1 1 260px"><label for="b-txt">Nº, placa, motorista, RE ou código de verificação</label><input id="b-txt" data-i="bTxt" value="${esc(b.txt || '')}" placeholder="ex.: CK-2026-00125, CUI-3D39, Leandro"></div>
         <div class="field"><label for="b-de">De</label><input type="date" id="b-de" data-i="bDe" value="${esc(b.de || '')}"></div><div class="field"><label for="b-ate">Até</label><input type="date" id="b-ate" data-i="bAte" value="${esc(b.ate || '')}"></div>
         <div class="field"><label for="b-placa">Veículo</label><select id="b-placa" data-i="bPlaca"><option value="">Todos</option>${F.veiculos.map(v => `<option ${b.placa === v.placa ? 'selected' : ''}>${v.placa}</option>`).join('')}</select></div>
@@ -129,7 +134,7 @@ const PCK = (() => {
         <button type="button" class="btn btn-sm btn-main" data-a="buscar">Buscar</button><button type="button" class="btn btn-sm btn-ghost" data-a="limpar">Limpar</button></div>
       ${!res || !res.length ? '<p class="mut">Nenhum checklist encontrado.</p>' : `<div class="tbl-wrap"><table><thead><tr><th>Nº</th><th>Veículo</th><th>Motorista</th><th>Saída</th><th>Volta</th><th>Situação</th><th></th></tr></thead><tbody>${res.slice(0, 20).map(c => `<tr>
         <td class="num">${esc(c.numero)}</td><td><b>${esc(c.placa)}</b></td><td>${esc(c.motorista)}<br><small class="mut">RE ${esc(c.re || '')}</small></td><td class="num">${dt(c.saida_em)}</td><td class="num">${dt(c.volta_em)}</td>
-        <td>${SIT_CK[c.situacao]}${c.tem_nc || c.tem_falta || c.tem_avaria ? `<br><small class="bad">${[c.tem_nc && 'NC', c.tem_avaria && 'avaria', c.tem_falta && 'falta'].filter(Boolean).join(' · ')}</small>` : ''}</td>
+        <td>${c.papel ? '<span class="tag-papel">Lançado do papel</span><br>' : ''}${SIT_CK[c.situacao]}${c.tem_nc || c.tem_falta || c.tem_avaria ? `<br><small class="bad">${[c.tem_nc && 'NC', c.tem_avaria && 'avaria', c.tem_falta && 'falta'].filter(Boolean).join(' · ')}</small>` : ''}</td>
         <td style="white-space:nowrap"><button type="button" class="btn btn-sm btn-ghost" data-a="folha" data-v="${c.id}">Imprimir</button>${A.admin ? (excl === c.id ? `<div class="excl"><span class="bad">Excluir ${esc(c.numero)}? Apaga o checklist, as fotos e as inspeções de escada dele. Não tem volta.</span><div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="exclVoltar">Não</button><button type="button" class="btn btn-sm btn-warn" data-a="exclOk" data-v="${c.id}">Sim, excluir</button></div></div>` : ` <button type="button" class="linkbtn btn-excl" data-a="excluir" data-v="${c.id}">Excluir</button>`) : ''}</td></tr>`).join('')}</tbody></table></div>
         <div class="ped-act">${busca.offset ? '<button type="button" class="btn btn-sm btn-ghost" data-a="anterior">Anteriores</button>' : ''}${res.length > 20 ? '<button type="button" class="btn btn-sm btn-ghost" data-a="mais">Mostrar mais</button>' : ''}</div>`}</div>`;
   }
@@ -141,8 +146,8 @@ const PCK = (() => {
 
   // ---------- folha impressa do checklist ----------
   const quemE = (c, id) => id && c.nomes[id] ? c.nomes[id] : null;
-  let parou = false;   // o checklist não chegou a sair: etapas seguintes ficam como "Não houve"
-  const reg = (t, p, quando, sel) => p ? `<div class="freg"><small>${t}</small><b>${esc(p.nome)}</b><span class="num">RE ${esc(p.re || '')}<br>${esc(quando)}</span><div class="v">✓ ${sel}</div></div>` : `<div class="freg vazio"><small>${t}</small>${parou ? 'Não houve' : 'Pendente'}</div>`;
+  let parou = false, papel = false;   // parou: o checklist não chegou a sair; papel: lançado da folha de papel
+  const reg = (t, p, quando, sel) => p ? `<div class="freg"><small>${t}</small><b>${esc(p.nome)}</b><span class="num">RE ${esc(p.re || '')}<br>${esc(quando)}</span><div class="v">✓ ${papel ? 'ASSINADO NO PAPEL' : sel}</div></div>` : `<div class="freg vazio"><small>${t}</small>${papel ? 'Não informado na folha' : parou ? 'Não houve' : 'Pendente'}</div>`;
   function logos() { return '<span class="flogos"><img src="assets/fleet-branco.png?v=2" alt="FLEET"><span class="flogo-sep"></span><img class="fml" src="assets/logo-branco.png" alt="Manaus Luz"></span>'; }
   async function abrirFolha(id) {
     try { const c = await rpc('painel_ck_folha', { p_ck: +id }); await assinarFotos(fotosDe(c)); modal(folha(c), 'Folha A4 do checklist. Use Imprimir para imprimir ou salvar em PDF.'); }
@@ -150,16 +155,17 @@ const PCK = (() => {
   }
   function folha(c) {
     const m = c.modelo_info, ult = c.volta || c.saida, it = ult.itens || {}, ref = c.itens_ref;
-    parou = ['bloqueado', 'recusado', 'barrado', 'cancelado'].includes(c.situacao); arq = !!c.fotos_arquivadas_em;
+    parou = ['bloqueado', 'recusado', 'barrado', 'cancelado'].includes(c.situacao); arq = !!c.fotos_arquivadas_em; papel = c.origem === 'papel';
     const probs = ref.filter(r => ruim((it[r.id] || {}).v)).length;
     const sit = c.situacao === 'fim' && c.volta && (c.volta.criticos || []).length && !c.desbloqueio ? 'BLOQUEADO' : (SIT_CK[c.situacao] || c.situacao).toUpperCase();
     const comb = i => { const n = Math.round(i / 2); return `<span style="display:inline-flex;gap:2px">${[1, 2, 3, 4].map(k => `<i style="width:14px;height:7px;border-radius:2px;background:${k <= n ? '#1f4ea8' : '#e3e6ec'}"></i>`).join('')}</span> <span class="num" style="font-size:11px">${NIV[i]}</span>`; };
-    let h = `<div class="folha"><div class="ftopo"><div style="display:flex;gap:14px;align-items:center">${logos()}<div><h2>CHECKLIST DE VEÍCULO</h2><p>${esc(m.nome)} · ${esc(m.rev || '')} (digital)</p></div></div><div class="n"><small>Nº DO CHECKLIST</small><b>${esc(c.numero)}</b></div></div><div class="faixa"></div>
-      <div class="fcards"><div class="fcard d"><small>Veículo</small><b>${esc(c.placa)}</b><div style="font-size:11px;color:var(--fm)">${esc(c.veiculo || '')}</div></div><div class="fcard"><small>Km saída</small><b>${fmt(c.saida.km)}</b>${c.volta ? `<div style="font-size:11px;color:var(--fm)">volta ${fmt(c.volta.km)}</div>` : ''}</div>
+    let h = `<div class="folha"><div class="ftopo"><div style="display:flex;gap:14px;align-items:center">${logos()}<div><h2>CHECKLIST DE VEÍCULO</h2><p>${esc(m.nome)} · ${esc(m.rev || '')} (${papel ? 'lançado do papel' : 'digital'})</p></div></div><div class="n"><small>Nº DO CHECKLIST</small><b>${esc(c.numero)}</b></div></div><div class="faixa"></div>
+      ${papel ? `<div class="fdef" style="margin:12px 0 0;border-left:4px solid #9a6200;background:#fbefd2;border-color:#f0d9a0"><div><small style="color:#9a6200">LANÇADO DO PAPEL</small><div>Checklist feito na folha de papel (app fora do ar) e lançado depois no painel por <b>${esc((quemE(c, c.lancamento && c.lancamento.por) || {}).nome || '')}</b> em ${dt(c.lancamento && c.lancamento.em)}. Sem fotos. Datas e horas conforme a folha.</div></div></div>` : ''}
+      <div class="fcards"><div class="fcard d"><small>Veículo</small><b>${esc(c.placa)}</b><div style="font-size:11px;color:var(--fm)">${esc(c.veiculo || '')}</div></div><div class="fcard"><small>Km saída</small><b>${fmt(c.saida.km)}</b>${c.volta && c.volta.km != null ? `<div style="font-size:11px;color:var(--fm)">volta ${fmt(c.volta.km)}</div>` : ''}</div>
       <div class="fcard"><small>Combustível</small>${comb(ult.comb)}</div><div class="fcard"><small>Pneus</small><b style="font:700 15px var(--f-disp)">${esc((ult.pneus || '').toUpperCase())}</b></div>
       <div class="fcard ${probs || sit === 'BLOQUEADO' ? 'w' : ''}"><small>Situação</small><b>${esc(sit)}</b><div style="font-size:11px;color:var(--fm)">${probs} item(ns) com problema</div></div></div>
       <div class="fcards"><div class="fcard"><small>Saída</small><b style="font-size:13px">${dt(c.saida_em)}</b></div><div class="fcard"><small>Volta</small><b style="font-size:13px">${dt(c.volta_em)}</b></div>
-      <div class="fcard"><small>Condutor</small><b style="font:600 13px var(--f-body)">${esc((quemE(c, c.motorista_id) || {}).nome || '')}</b></div><div class="fcard"><small>Saída autorizada por</small><b style="font:600 13px var(--f-body)">${c.autorizacao ? esc(quemE(c, c.autorizacao.por).nome) : c.saida.sai_sem ? 'Sem necessidade' : '—'}</b></div></div>`;
+      <div class="fcard"><small>Condutor</small><b style="font:600 13px var(--f-body)">${esc((quemE(c, c.motorista_id) || {}).nome || '')}</b></div><div class="fcard"><small>Saída autorizada por</small><b style="font:600 13px var(--f-body)">${c.autorizacao ? esc(quemE(c, c.autorizacao.por).nome) : c.saida.sai_sem ? 'Sem necessidade' : papel ? 'Não informado' : '—'}</b></div></div>`;
     const secoes = []; ref.forEach(i => { let s = secoes.find(x => x.t === i.secao); if (!s) secoes.push(s = { t: i.secao, i: [] }); s.i.push(i); });
     secoes.forEach(s => {
       const rs = s.i.filter(i => ruim((it[i.id] || {}).v)), meio = Math.ceil(s.i.length / 2);
@@ -168,17 +174,17 @@ const PCK = (() => {
         ${rs.map(i => `<div class="fdef">${thumb(it[i.id].foto, 70, 50)}<div><small>${it[i.id].v} · ${esc(i.nome)}</small><div>${esc(it[i.id].desc || '')}</div></div></div>`).join('')}</div>`;
     });
     const ks = m.qtd || [];
-    if (ks.length) { const qs = (c.portaria_saida && c.portaria_saida.qtd) || c.saida.qtd, qv = c.portaria_volta && c.portaria_volta.qtd;
-      h += `<h5>Quantidades · saída x volta <span style="font:500 11px var(--f-body);color:var(--fm);text-transform:none;letter-spacing:0">contadas pelo porteiro</span></h5><div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Saída</th><th>Volta</th><th>Diferença</th></tr></thead><tbody>${ks.map(k => { const vo = qv ? qv[k] : null, df = vo == null ? null : vo - qs[k];
-        return `<tr class="${df < 0 ? 'dif' : ''}"><td>${esc(k)}</td><td class="num">${qs[k] ?? '—'}${c.saida.qtd[k] !== qs[k] ? ` <small>(motorista: ${c.saida.qtd[k]})</small>` : ''}</td><td class="num">${vo ?? '—'}${c.volta && qv && c.volta.qtd[k] !== vo ? ` <small>(motorista: ${c.volta.qtd[k]})</small>` : ''}</td><td class="num">${df == null ? '—' : df < 0 ? df + ' faltando' : 'ok'}</td></tr>`; }).join('')}</tbody></table></div>`; }
+    if (ks.length) { const qs = (c.portaria_saida && c.portaria_saida.qtd) || c.saida.qtd, qv = (c.portaria_volta && c.portaria_volta.qtd) || (papel && c.volta && c.volta.qtd);
+      h += `<h5>Quantidades · saída x volta <span style="font:500 11px var(--f-body);color:var(--fm);text-transform:none;letter-spacing:0">${papel ? 'conforme a folha de papel' : 'contadas pelo porteiro'}</span></h5><div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Saída</th><th>Volta</th><th>Diferença</th></tr></thead><tbody>${ks.map(k => { const vo = qv ? qv[k] : null, df = vo == null || qs[k] == null ? null : vo - qs[k];
+        return `<tr class="${df < 0 ? 'dif' : ''}"><td>${esc(k)}</td><td class="num">${qs[k] ?? '—'}${!papel && c.saida.qtd[k] !== qs[k] ? ` <small>(motorista: ${c.saida.qtd[k]})</small>` : ''}</td><td class="num">${vo ?? '—'}${!papel && c.volta && qv && c.volta.qtd[k] !== vo ? ` <small>(motorista: ${c.volta.qtd[k]})</small>` : ''}</td><td class="num">${df == null ? '—' : df < 0 ? df + ' faltando' : 'ok'}</td></tr>`; }).join('')}</tbody></table></div>`; }
     if (c.escadas.length) h += `<h5>Escadas inspecionadas na saída</h5><div style="display:flex;gap:8px;flex-wrap:wrap">${c.escadas.map(e => `<div class="freg"><small>Escada ${esc(e.num)} · ${esc(e.numero)}</small><b>${esc(e.ref.tipo || '')} · ${esc(e.ref.tamanho || '')}</b><span class="${e.nc ? '' : 'v'}" style="${e.nc ? 'color:#e2711d;font-weight:700' : ''}">${e.nc ? 'COM NC (registro p/ Segurança)' : '✓ CONFORME'}</span></div>`).join('')}</div>`;
-    if (c.avarias.length) h += `<h5>Avarias externas</h5><div style="display:flex;gap:8px;flex-wrap:wrap">${c.avarias.map(a => `<div class="freg" style="display:flex;gap:8px;align-items:center">${thumb(a.foto, 54, 40)}<div><b>${a.tipo} · ${AV[a.tipo]}</b>${esc(a.local)} · ${a.quando === 'saida' ? 'na saída' : 'na volta'}${a.vezes > 1 ? ` · <span style="color:#6b7280">mencionada ${a.vezes}x</span>` : ''}</div></div>`).join('')}</div>`;
+    if (c.avarias.length) h += `<h5>Avarias externas</h5><div style="display:flex;gap:8px;flex-wrap:wrap">${c.avarias.map(a => `<div class="freg" style="display:flex;gap:8px;align-items:center">${a.foto ? thumb(a.foto, 54, 40) : ''}<div><b>${a.tipo} · ${AV[a.tipo]}</b>${esc(a.local)} · ${a.quando === 'saida' ? 'na saída' : 'na volta'}${a.vezes > 1 ? ` · <span style="color:#6b7280">mencionada ${a.vezes}x</span>` : ''}</div></div>`).join('')}</div>`;
     const obs = [c.saida.obs && 'Saída: ' + c.saida.obs, c.volta && c.volta.obs && 'Volta: ' + c.volta.obs].filter(Boolean).join(' ');
     if (obs) h += `<h5>Observações</h5><div style="border:1px solid var(--fl);border-radius:8px;padding:8px 10px">${esc(obs)}</div>`;
     const ps = c.portaria_saida, pv = c.portaria_volta;
-    h += `<h5>Registros eletrônicos <span style="font:500 11px var(--f-body);color:var(--fm);text-transform:none;letter-spacing:0">cada etapa confirmada por login individual</span></h5><div class="fregs">
+    h += `<h5>${papel ? 'Assinaturas da folha de papel' : 'Registros eletrônicos'} <span style="font:500 11px var(--f-body);color:var(--fm);text-transform:none;letter-spacing:0">${papel ? 'nomes conforme a folha, lançados no painel' : 'cada etapa confirmada por login individual'}</span></h5><div class="fregs">
       ${reg('1 · Preenchido por', quemE(c, c.motorista_id), dt(c.saida_em), 'CONFIRMADO COM PIN')}
-      ${c.saida.sai_sem ? '<div class="freg"><small>2 · Autorização</small><b>Não necessária</b><span class="num">função sai sem autorização</span></div>' : reg('2 · Saída autorizada por', c.autorizacao && quemE(c, c.autorizacao.por), c.autorizacao ? dt(c.autorizacao.em) + (c.autorizacao.via === 'celular' ? ' · pelo celular' : ' · pelo painel') : '', 'CONFIRMADO COM PIN')}
+      ${c.saida.sai_sem ? '<div class="freg"><small>2 · Autorização</small><b>Não necessária</b><span class="num">função sai sem autorização</span></div>' : reg('2 · Saída autorizada por', c.autorizacao && quemE(c, c.autorizacao.por), c.autorizacao ? dt(c.autorizacao.em) + (c.autorizacao.via === 'celular' ? ' · pelo celular' : c.autorizacao.via === 'papel' ? '' : ' · pelo painel') : '', 'CONFIRMADO COM PIN')}
       ${c.recusa ? `<div class="freg" style="background:#fdeee2;border-color:#f3c39b"><small style="color:#e2711d">Não autorizado</small><b>${esc(quemE(c, c.recusa.por).nome)}</b><span class="num">${dt(c.recusa.em)}</span><div>${esc(c.recusa.motivo)}: ${esc(c.recusa.desc)}</div></div>` : ''}
       ${ps && ps.liberou === false ? `<div class="freg" style="background:#fdeee2;border-color:#f3c39b"><small style="color:#e2711d">3 · Portaria não liberou</small><b>${esc(quemE(c, ps.por).nome)}</b><span class="num">${dt(ps.em)}</span><div>${esc(ps.motivo || '')}</div></div>` : reg('3 · Saída liberada por (portaria)', ps && quemE(c, ps.por), ps ? dt(ps.em) : '', 'CONFIRMADO COM PIN')}
       ${c.encerramento ? `<div class="freg" style="background:#fdeee2;border-color:#f3c39b"><small style="color:#e2711d">4 · Encerrado manualmente</small><b>${esc(quemE(c, c.encerramento.por).nome)}</b><span class="num">${dt(c.encerramento.em)}</span><div>${esc(c.encerramento.motivo)}</div></div>`
@@ -194,7 +200,98 @@ const PCK = (() => {
     m.innerHTML = `<div class="modal-caixa"><div class="modal-barra"><span>${txt}</span><span style="display:flex;gap:8px"><button type="button" class="tema" data-a="imprimir">Imprimir</button><button type="button" class="tema" data-a="fechar">Fechar</button></span></div>${html}</div>`;
     m.hidden = false; document.body.classList.add('com-modal'); m.scrollTop = 0;
   }
-  function fecharModal() { $('ck-modal').hidden = true; document.body.classList.remove('com-modal'); }
+  function fecharModal() { $('ck-modal').hidden = true; document.body.classList.remove('com-modal'); papelSujo = false; }
+
+  // =================== LANÇAR CHECKLIST DO PAPEL ===================
+  // Só para manter o registro: não bloqueia, não muda a situação do veículo, sem fotos.
+  let PAP = null;
+  const agoraLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+  async function abrirPapel() {
+    try { PAP = await rpc('painel_ck_papel_dados'); } catch (e) { return toast(e.message, true); }
+    const m = $('ck-modal'), max = agoraLocal();
+    const optP = (l, vazio) => `<option value="">${vazio}</option>` + l.map(p => `<option value="${p.id}">${esc(p.nome)}${p.ativo === false ? ' (inativo)' : ''}</option>`).join('');
+    const comb = id => `<select id="${id}"><option value="">—</option>${NIV.map((n, i) => `<option value="${i}">${n}</option>`).join('')}</select>`;
+    m.innerHTML = `<div class="modal-caixa" data-form="papel"><div class="modal-barra"><span>Lançar checklist feito no papel</span><span style="display:flex;gap:8px"><button type="button" class="tema" data-a="ppFechar">Fechar</button></span></div>
+      <div class="papel">
+        <div class="pp-aviso"><b>Só para manter o registro.</b> Sem fotos, não bloqueia e não muda a situação do veículo. Fica marcado como "Lançado do papel", com o seu nome e a hora do lançamento.</div>
+        <div class="card"><div class="card-h"><h2>Veículo e datas</h2></div><div class="pp-grid">
+          <div class="field" style="grid-column:1/-1;max-width:420px"><label for="pp-placa">Veículo</label><select id="pp-placa"><option value="">Escolha o veículo</option>${PAP.veiculos.map(v => `<option value="${esc(v.placa)}">${esc(v.placa)} · ${esc(v.modelo)} · ${CAT[v.modelo_ck]}</option>`).join('')}</select><span class="mut" id="pp-km-ult"></span></div>
+          <div class="field"><label for="pp-saida">Saída (data e hora)</label><input type="datetime-local" id="pp-saida" max="${max}"></div>
+          <div class="field"><label for="pp-km">Km da saída</label><input id="pp-km" class="num" inputmode="numeric"></div>
+          <div class="field"><label for="pp-comb">Combustível na saída</label>${comb('pp-comb')}</div>
+          <div class="field"><label for="pp-pneus">Pneus</label><select id="pp-pneus"><option value="">—</option><option>Novos</option><option>Bons</option><option>Ruins</option></select></div>
+          <div class="field"><label for="pp-volta">Volta (opcional)</label><input type="datetime-local" id="pp-volta" max="${max}"></div>
+          <div class="field"><label for="pp-kmv">Km da volta (opcional)</label><input id="pp-kmv" class="num" inputmode="numeric"></div>
+          <div class="field"><label for="pp-combv">Combustível na volta</label>${comb('pp-combv')}</div>
+        </div></div>
+        <div class="card"><div class="card-h"><h2>Quem assinou a folha</h2></div><div class="pp-grid">
+          <div class="field"><label for="pp-mot">Quem preencheu</label><input id="pp-mot" list="pp-pessoas" placeholder="Digite o nome ou o RE" autocomplete="off"><datalist id="pp-pessoas">${PAP.pessoas.map(p => `<option value="${esc(p.nome)} · RE ${esc(p.re || '—')}${p.ativo ? '' : ' (inativo)'}"></option>`).join('')}</datalist><span class="pp-pe mut" id="pp-mot-ok"></span></div>
+          <div class="field"><label for="pp-aut">Autorizado por</label><select id="pp-aut">${optP(PAP.autorizadores, 'Não informado / sem autorização')}</select></div>
+          <div class="field"><label for="pp-port">Porteiro na saída</label><select id="pp-port">${optP(PAP.porteiros, 'Não informado')}</select></div>
+          <div class="field"><label for="pp-portv">Porteiro na volta</label><select id="pp-portv">${optP(PAP.porteiros, 'Não informado')}</select></div>
+        </div></div>
+        <div class="card" id="pp-itens"><p class="mut">Escolha o veículo para aparecerem os itens do checklist dele.</p></div>
+        <div class="card"><div class="card-h"><h2>Avarias externas</h2><span class="sub">Sem foto. Entram na contagem de "Avarias por veículo".</span><button type="button" class="btn btn-sm btn-ghost" data-a="ppAvAdd" style="margin-left:auto">+ Adicionar avaria</button></div><div id="pp-avs"><p class="mut" id="pp-av-vazio">Nenhuma avaria anotada na folha.</p></div></div>
+        <div class="card"><div class="card-h"><h2>Observações</h2></div><div class="pp-grid">
+          <div class="field"><label for="pp-obs">Na saída</label><textarea id="pp-obs"></textarea></div>
+          <div class="field"><label for="pp-obsv">Na volta</label><textarea id="pp-obsv"></textarea></div></div></div>
+        <div class="pp-rod"><span class="bad" id="pp-erro"></span><button type="button" class="btn btn-sm btn-ghost" data-a="ppFechar">Cancelar</button><button type="button" class="btn btn-sm btn-main" data-a="ppGravar">Gravar registro</button></div>
+      </div></div>`;
+    m.hidden = false; document.body.classList.add('com-modal'); m.scrollTop = 0; papelSujo = false;
+  }
+  let papelSujo = false;
+  function itensPapel() {
+    const v = PAP.veiculos.find(x => x.placa === $('pp-placa').value), box = $('pp-itens');
+    $('pp-km-ult').textContent = v && v.km ? `Último km registrado: ${fmt(v.km)}` : '';
+    if (!v) { box.innerHTML = '<p class="mut">Escolha o veículo para aparecerem os itens do checklist dele.</p>'; return; }
+    const mod = PAP.modelos[v.modelo_ck] || { qtd: [] }; let sec = '', h = '';
+    v.itens.forEach(i => {
+      if (i.secao !== sec) { sec = i.secao; h += `<div class="pp-sec">${esc(sec)}</div>`; }
+      h += `<div class="pp-it" data-it="${i.id}"><span class="pp-n">${esc(i.nome)}${i.critico ? '<span class="crit">CRÍTICO</span>' : ''}</span><span class="seg">${OPC[i.opcoes].map(o => `<button type="button" data-a="ppSeg" class="${o === 'C' || o === 'NA' ? '' : 'm'}" aria-pressed="${o === 'C'}">${o}</button>`).join('')}</span><input data-desc placeholder="Descrição do problema (como está na folha)" hidden></div>`;
+    });
+    box.innerHTML = `<div class="card-h"><h2>Itens · ${esc(mod.nome || '')}</h2><span class="sub">Já vem tudo marcado C. Mude só o que estiver diferente na folha.</span>
+        <span class="chips" style="margin-left:auto"><button type="button" class="chip" data-a="ppTudo" data-v="C">Tudo C</button><button type="button" class="chip" data-a="ppTudo" data-v="">Limpar</button></span></div>${h}
+      ${mod.qtd.length ? `<div class="pp-sec" style="margin-top:16px">Quantidades</div><div class="pp-qtd"><span></span><small>Saída</small><small>Volta</small>${mod.qtd.map(k => `<span>${esc(k)}</span><input data-qs="${esc(k)}" inputmode="numeric" maxlength="2"><input data-qv="${esc(k)}" inputmode="numeric" maxlength="2">`).join('')}</div>` : ''}`;
+  }
+  function segClique(b) {
+    const it = b.closest('.pp-it'), ja = b.getAttribute('aria-pressed') === 'true';
+    it.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', 'false'));
+    if (!ja) b.setAttribute('aria-pressed', 'true');   // clicar de novo desmarca (fica em branco, como na folha)
+    const v = ja ? '' : b.textContent; it.querySelector('[data-desc]').hidden = !ruim(v); papelSujo = true;
+  }
+  function avLinha() {
+    const vazio = $('pp-av-vazio'); if (vazio) vazio.remove();
+    $('pp-avs').insertAdjacentHTML('beforeend', `<div class="pp-av"><select data-av="quando"><option value="saida">Na saída</option><option value="volta">Na volta</option></select>
+      <select data-av="tipo"><option value="">Tipo</option><option value="R">R · Riscado / ralado</option><option value="A">A · Amassado</option><option value="Q">Q · Quebrado</option></select>
+      <select data-av="local"><option value="">Local</option>${LOCAIS.map(l => `<option>${l}</option>`).join('')}</select><input data-av="outro" placeholder="Qual local?" hidden>
+      <button type="button" class="linkbtn" data-a="ppAvDel">Remover</button></div>`);
+  }
+  function lerPapel() {
+    const val = id => $(id).value.trim(), quando = id => val(id) ? new Date(val(id)).toISOString() : null;
+    const txt = val('pp-mot'), re = (txt.match(/RE\s*(\S+)/) || [])[1];
+    const mot = PAP.pessoas.find(p => `${p.nome} · RE ${p.re || '—'}${p.ativo ? '' : ' (inativo)'}` === txt)
+      || (re && PAP.pessoas.filter(p => p.re === re).length === 1 && PAP.pessoas.find(p => p.re === re))
+      || (/^\d+$/.test(txt) && PAP.pessoas.filter(p => +p.re === +txt).length === 1 && PAP.pessoas.find(p => +p.re === +txt));
+    const itens = {}; document.querySelectorAll('#pp-itens .pp-it').forEach(r => { const b = r.querySelector('.seg [aria-pressed=true]');
+      if (b) itens[r.dataset.it] = { v: b.textContent, desc: r.querySelector('[data-desc]').hidden ? '' : r.querySelector('[data-desc]').value }; });
+    const qtd = {}, qtdV = {}; document.querySelectorAll('#pp-itens [data-qs]').forEach(i => qtd[i.dataset.qs] = i.value.trim());
+    document.querySelectorAll('#pp-itens [data-qv]').forEach(i => qtdV[i.dataset.qv] = i.value.trim());
+    const avarias = [...document.querySelectorAll('#pp-avs .pp-av')].map(r => { const g = k => r.querySelector(`[data-av=${k}]`).value.trim(); return { quando: g('quando'), tipo: g('tipo'), local: g('local'), outro: g('outro') }; });
+    return { placa: val('pp-placa'), dados: { motorista: mot ? mot.id : '', autorizador: val('pp-aut'), porteiro: val('pp-port'), porteiro_volta: val('pp-portv'),
+      saida_em: quando('pp-saida'), volta_em: quando('pp-volta'), km: val('pp-km'), km_volta: val('pp-kmv'), comb: val('pp-comb'), comb_volta: val('pp-combv'),
+      pneus: val('pp-pneus'), itens, qtd, qtd_volta: qtdV, avarias, obs: val('pp-obs'), obs_volta: val('pp-obsv') }, motTxt: txt };
+  }
+  async function gravarPapel(b) {
+    const { placa, dados, motTxt } = lerPapel(), erro = t => { $('pp-erro').textContent = t; toast(t, true); };
+    if (!placa) return erro('Escolha o veículo.');
+    if (!dados.motorista) return erro(motTxt ? 'Não achei quem preencheu. Escolha o nome na lista que aparece ao digitar.' : 'Digite quem preencheu a folha.');
+    if (!dados.saida_em) return erro('Digite a data e a hora da saída.');
+    b.disabled = true; $('pp-erro').textContent = '';
+    try { const r = await rpc('painel_ck_papel', { p_placa: placa, p_dados: dados }); papelSujo = false; fecharModal();
+      toast(`${r.numero} gravado como "Lançado do papel".`); res = null; busca = { offset: 0 }; await buscar(); if (F) pintaCk(); }
+    catch (e) { erro(e.message); } finally { b.disabled = false; }
+  }
+  const sairPapel = () => !papelSujo || confirm('Sair sem gravar? O que foi digitado será perdido.');
 
   // =================== ABA ESCADAS ===================
   async function carregarEsc(silencioso) {
@@ -327,6 +424,13 @@ const PCK = (() => {
       case 'folhaE': return abrirFolhaE(v);
       case 'imprimir': return window.print();
       case 'fechar': return fecharModal();
+      case 'papel': return abrirPapel();
+      case 'ppFechar': if (sairPapel()) fecharModal(); return;
+      case 'ppSeg': return segClique(b);
+      case 'ppTudo': document.querySelectorAll('#pp-itens .pp-it').forEach(r => { r.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x.textContent === v))); r.querySelector('[data-desc]').hidden = true; }); papelSujo = true; return;
+      case 'ppAvAdd': papelSujo = true; return avLinha();
+      case 'ppAvDel': b.closest('.pp-av').remove(); return;
+      case 'ppGravar': return gravarPapel(b);
       case 'autorizar': if (await vai(() => rpc('painel_aut_decidir', { p_ck: +v, p_aprovar: true }), 'Saída autorizada. Agora aparece para o porteiro.')) carregarCk(); return;
       case 'recusar': rec = { id: +v }; return pintaCk();
       case 'recVoltar': rec = null; return pintaCk();
@@ -387,9 +491,14 @@ const PCK = (() => {
   function ligar() {
     document.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b && (b.closest('#tab-ck,#tab-esc,#cad-ck,#ck-modal'))) { e.preventDefault(); act(b.dataset.a, b); } });
     document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.i && e.target.closest('#tab-ck,#tab-esc,#cad-ck')) entrada(e.target); });
+    document.addEventListener('change', e => { const t = e.target; if (!t.closest || !t.closest('.papel')) return; papelSujo = true;
+      if (t.id === 'pp-placa') itensPapel();
+      if (t.dataset.av === 'local') t.parentNode.querySelector('[data-av=outro]').hidden = t.value !== 'Outro';
+      if (t.id === 'pp-mot') { const ok = lerPapel().dados.motorista; $('pp-mot-ok').textContent = t.value && !ok ? 'Escolha um nome da lista.' : ''; } });
+    document.addEventListener('input', e => { if (e.target.closest && e.target.closest('.papel')) papelSujo = true; });
     document.addEventListener('change', async e => { if (e.target.dataset && e.target.dataset.foto === 'rec' && e.target.files[0]) { try { rec.foto = await reduzir(e.target.files[0]); pintaCk(); } catch (err) { toast(err.message, true); } } });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('ck-modal').hidden) fecharModal(); if (e.key === 'Enter' && e.target.dataset && /^(bTxt|beTxt)$/.test(e.target.dataset.i || '')) act(e.target.dataset.i === 'bTxt' ? 'buscar' : 'buscarE', e.target); });
-    $('ck-modal').addEventListener('click', e => { if (e.target.id === 'ck-modal') fecharModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('ck-modal').hidden && sairPapel()) fecharModal(); if (e.key === 'Enter' && e.target.dataset && /^(bTxt|beTxt)$/.test(e.target.dataset.i || '')) act(e.target.dataset.i === 'bTxt' ? 'buscar' : 'buscarE', e.target); });
+    $('ck-modal').addEventListener('click', e => { if (e.target.id === 'ck-modal' && sairPapel()) fecharModal(); });
   }
   montarAbas(); ligar();
   return { iniciar, atualizar: () => { if (!$('tab-ck').hidden) carregarCk(true); if (!$('tab-esc').hidden) carregarEsc(true); } };
