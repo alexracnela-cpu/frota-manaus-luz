@@ -246,3 +246,23 @@ body.fundo-pc>#ck-modal{position:fixed;z-index:60}
 .kpi.mflag{position:relative;overflow:hidden;padding-top:20px;border-color:var(--man);background:var(--man-soft)}
 .kpi.mflag .v{color:var(--man)}
 .kpi.mflag::before{content:"";position:absolute;inset:0 0 auto;height:6px;background:repeating-linear-gradient(-45deg,var(--man) 0 8px,transparent 8px 16px)}
+
+/* folha da situação da frota: lista compacta para caber em uma folha A4 */
+.folha-frota .fcards{margin-top:10px}
+.folha-frota .fcard{padding:5px 8px}
+.folha-frota th{padding:4px 6px;font-size:10px}
+.folha-frota td{padding:2px 6px;font-size:10.5px;line-height:1.2}
+.folha-frota .ftopo{padding-top:12px;padding-bottom:10px}
+.folha-frota .frod{margin-top:6px;padding-top:6px}
+.folha-frota tbody tr:nth-child(even) td{background:#f6f8fc}
+/* cartões da aba Checklist: sem fundo colorido, faixa zebrada amarela e preta no topo quando tem veículo */
+.kpis-ck .kpi.flag,.kpis-ck .kpi.mflag{background:var(--surface);border-color:var(--line)}
+.kpis-ck .kpi.flag::before,.kpis-ck .kpi.mflag::before{background:repeating-linear-gradient(-45deg,var(--faixa-a) 0 8px,var(--faixa-b) 8px 16px)}
+
+/* folha da situação da frota em paisagem */
+@page paisagem{size:A4 landscape;margin:8mm}
+.folha-frota{page:paisagem}
+.ff-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;align-items:start}
+.ff-cols table{width:100%}
+@media print{.folha-frota .ff-cols table{break-inside:auto}body.com-modal .modal-caixa:has(.folha-frota){width:auto;max-width:none}}
+.folha-frota td small{font-size:9.5px}

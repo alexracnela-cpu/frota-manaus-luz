@@ -119,7 +119,7 @@ const PCK = (() => {
       : ordem === 'cat' ? (a.modelo_ck.localeCompare(b.modelo_ck) || a.placa.localeCompare(b.placa)) : (ORD[a.situacao] - ORD[b.situacao] || a.placa.localeCompare(b.placa)));
     const n = s => F.veiculos.filter(v => v.situacao === s).length;
     return `<div class="card"><div class="card-h"><h2>Situação da frota</h2><span class="sub">${n('disp')} disponíveis · ${n('uso')} em uso · ${n('aut') + n('port') + n('volta')} aguardando · ${n('blq')} bloqueados${n('man') ? ` · ${n('man')} em manutenção` : ''}</span>
-      <div class="chips" style="margin-left:auto">${[['sit', 'Por situação'], ['cat', 'Por categoria'], ['placa', 'Por placa']].map(([k, t]) => `<button type="button" class="chip" data-a="ordem" data-v="${k}" aria-pressed="${ordem === k}">${t}</button>`).join('')}</div></div>
+      <div class="chips" style="margin-left:auto">${[['sit', 'Por situação'], ['cat', 'Por categoria'], ['placa', 'Por placa']].map(([k, t]) => `<button type="button" class="chip" data-a="ordem" data-v="${k}" aria-pressed="${ordem === k}">${t}</button>`).join('')}<button type="button" class="btn btn-sm btn-main" data-a="folhaFrota">Imprimir</button></div></div>
       <div class="tbl-wrap"><table><thead><tr><th>Veículo</th><th>Situação</th><th>Com quem / desde</th><th>Km</th><th></th></tr></thead><tbody>${vs.map(v => {
         const e = enc && enc.ck === v.ck ? enc : null, q = dq && dq.placa === v.placa ? dq : null;
         const ckv = v.ck || (v.bloqueio && v.bloqueio.checklist);
@@ -128,7 +128,7 @@ const PCK = (() => {
         if (A.opera && ['uso', 'volta'].includes(v.situacao)) act += e ? `<div class="enc"><input data-i="encMotivo" placeholder="Motivo (obrigatório)" value="${esc(e.motivo || '')}"><input data-i="encKm" class="num" inputmode="numeric" placeholder="Km atual (opcional)" value="${esc(e.km || '')}">${e.erro ? `<span class="bad">${esc(e.erro)}</span>` : ''}<div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="encVoltar">Voltar</button><button type="button" class="btn btn-sm btn-warn" data-a="encOk" data-v="${v.ck}">Encerrar</button></div></div>` : ` <button type="button" class="btn btn-sm btn-ghost" data-a="encerrar" data-v="${v.ck}">Encerrar</button>`;
         act += acoesManut(v);
         if (A.opera && ['blq', 'man'].includes(v.situacao)) act += q ? `<div class="enc"><input data-i="dqDesc" placeholder="O que foi feito (obrigatório)" value="${esc(q.desc || '')}">${q.erro ? `<span class="bad">${esc(q.erro)}</span>` : ''}<div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="dqVoltar">Voltar</button><button type="button" class="btn btn-sm btn-main" data-a="dqOk" data-v="${esc(v.placa)}">Desbloquear</button></div></div>` : ` <button type="button" class="btn btn-sm btn-main" data-a="desbloquear" data-v="${esc(v.placa)}">Desbloquear</button>`;
-        return `<tr><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || '')} · ${CAT[v.modelo_ck]}</small></td><td>${tag(v.situacao)}${v.situacao === 'blq' && v.bloqueio ? `<br><small class="bad">${esc(v.bloqueio.motivo || '')}</small>` : ''}${infoManut(v)}${v.situacao === 'aut' && v.autorizador ? `<br><small class="mut">aguardando ${esc(v.autorizador)}</small>` : ''}</td>
+        return `<tr><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || '')} · ${catDe(v)}</small></td><td>${tag(v.situacao)}${v.situacao === 'blq' && v.bloqueio ? `<br><small class="bad">${esc(v.bloqueio.motivo || '')}</small>` : ''}${infoManut(v)}${v.situacao === 'aut' && v.autorizador ? `<br><small class="mut">aguardando ${esc(v.autorizador)}</small>` : ''}</td>
           <td>${v.com ? `${esc(v.com)}<br><small class="mut num">${dt(v.desde)}</small>` : '—'}</td><td class="num">${v.km ? fmt(v.km) : '—'}</td><td>${act}</td></tr>`; }).join('')}</tbody></table></div></div>`;
   }
   // ---------- em manutenção ----------
@@ -227,6 +227,28 @@ const PCK = (() => {
         : sit === 'BLOQUEADO' || c.situacao === 'bloqueado' || (c.recusa && c.recusa.motivo === 'Defeito no veículo') ? '<div class="fdef" style="margin:12px 0 0;border-left:4px solid #e2711d"><div><small>Veículo bloqueado</small><div>Desbloqueio: Fernanda, Deysimar ou mecânico, com a descrição do que foi feito.</div></div></div>' : ''}
       <div class="frod"><div>Documento gerado pelo FLEET, sistema de frota da Manaus Luz.<br>Código de verificação: <span class="fcod">${esc(c.codigo)}</span><br>Para conferir: painel → Checklist → Buscar checklist, digite o código</div><div style="margin-left:auto;text-align:right" class="num">Impresso em ${fdt(new Date())}<br>por ${esc(curto(eu.nome))}</div></div></div>`;
     return h;
+  }
+  // folha A4 com a situação da frota: uma lista só, para caber numa folha (botão Imprimir da Situação da frota)
+  // cesto: altura pelo modelo (VW 9.170 = 13 m, VW 14.190 = 16 m, VW 24.260 = 26 m)
+  const METROS = [[/9\.?170/, 13], [/14\.?190/, 16], [/24\.?260/, 26]];
+  const catDe = v => { const c = CAT[v.modelo_ck] || ''; if (v.modelo_ck !== 'cesto') return c; const m = METROS.find(([r]) => r.test(v.modelo || '')); return m ? `${c} ${m[1]} m` : c; };
+  function folhaFrota() {
+    const OF = { disp: 0, uso: 1, aut: 2, port: 3, volta: 4, blq: 5, man: 6 };   // na folha, disponíveis primeiro
+    const vs = F.veiculos.slice().sort((a, b) => (OF[a.situacao] ?? 9) - (OF[b.situacao] ?? 9) || a.modelo_ck.localeCompare(b.modelo_ck) || a.placa.localeCompare(b.placa));
+    const n = s => vs.filter(v => v.situacao === s).length;
+    const cor = { disp: '#2f7d4f', uso: '#1f4ea8', aut: '#9a6200', port: '#9a6200', volta: '#9a6200', blq: '#e2711d', man: '#6a3fb5' };
+    const det = v => { const m = M[v.placa];
+      if (v.situacao === 'blq') return esc((v.bloqueio && v.bloqueio.motivo) || '');
+      if (v.situacao === 'man') return m ? `${esc(m.motivo)} · desde ${dt(m.inicio_em || m.marcado_em)} · ${esc(m.por || '')}` : '';
+      const base = v.com ? `${esc(v.com)} · desde ${dt(v.desde)}` : '';
+      return base + (m && m.ao_voltar ? `${base ? ' · ' : ''}<span style="color:#6a3fb5">manutenção ao voltar: ${esc(m.motivo)}</span>` : ''); };
+    return `<div class="folha folha-frota"><div class="ftopo"><div style="display:flex;gap:14px;align-items:center">${logos()}<div><h2>SITUAÇÃO DA FROTA</h2><p>${vs.length} veículos do checklist</p></div></div><div class="n"><small>POSIÇÃO EM</small><b>${fdt(new Date())}</b></div></div><div class="faixa"></div>
+      <div class="fcards"><div class="fcard d"><small>Disponíveis</small><b>${n('disp')}</b></div><div class="fcard"><small>Em uso</small><b>${n('uso')}</b></div><div class="fcard"><small>Aguardando</small><b>${n('aut') + n('port') + n('volta')}</b></div>
+        <div class="fcard ${n('blq') ? 'w' : ''}"><small>Bloqueados</small><b>${n('blq')}</b></div><div class="fcard"><small>Em manutenção</small><b>${n('man')}</b></div></div>
+      ${(() => { const meio = Math.ceil(vs.length / 2), tab = l => `<table><thead><tr><th>Placa</th><th>Veículo</th><th>Situação</th><th>Com quem / motivo</th><th style="text-align:right">Km</th></tr></thead>
+        <tbody>${l.map(v => `<tr><td style="white-space:nowrap"><b class="num">${esc(v.placa)}</b></td><td style="white-space:nowrap">${esc(v.modelo || '')} <small style="color:#6b7280">· ${catDe(v)}</small></td><td style="white-space:nowrap"><b style="color:${cor[v.situacao] || '#1d2433'}">${(SIT[v.situacao] || [v.situacao])[0]}</b></td><td>${det(v)}</td><td class="num" style="text-align:right;white-space:nowrap">${v.km ? fmt(v.km) : '—'}</td></tr>`).join('')}</tbody></table>`;
+        return `<div class="ff-cols">${tab(vs.slice(0, meio))}${vs.length > meio ? tab(vs.slice(meio)) : '<div></div>'}</div>`; })()}
+      <div class="frod"><div>Documento gerado pelo FLEET, sistema de frota da Manaus Luz.</div><div style="margin-left:auto;text-align:right" class="num">Impresso em ${fdt(new Date())}<br>por ${esc(curto(eu.nome))}</div></div></div>`;
   }
   function modal(html, txt) {
     const m = $('ck-modal');
@@ -454,6 +476,7 @@ const PCK = (() => {
     switch (a) {
       case 'ordem': ordem = v; try { localStorage.setItem('fleet_ordem', v); } catch (_) {} return pintaCk();
       case 'folha': return abrirFolha(v);
+      case 'folhaFrota': return modal(folhaFrota(), 'Situação da frota em folha A4. Use Imprimir para imprimir ou salvar em PDF.');
       case 'folhaE': return abrirFolhaE(v);
       case 'imprimir': return window.print();
       case 'fechar': return fecharModal();
