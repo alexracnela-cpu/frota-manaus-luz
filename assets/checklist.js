@@ -5,7 +5,7 @@ const CK = (() => {
   const LEG = { LAT: 'C conforme · R riscado/ralado · A amassado', EXT: 'C conforme · R riscado · Q quebrado' };
   const CAT = { cesto: 'Cesto', munk: 'Munck', leve: 'Frota leve', moto: 'Moto' };
   const SIT = { disp: ['Disponível', 'ok'], aut: ['Aguardando autorização', 'prox'], port: ['Aguardando portaria', 'prox'],
-    uso: ['Em uso', 'info'], volta: ['Volta a conferir', 'prox'], blq: ['Bloqueado', 'venc'] };
+    uso: ['Em uso', 'info'], volta: ['Volta a conferir', 'prox'], blq: ['Bloqueado', 'venc'], man: ['Em manutenção', 'man'] };
   const LOCAIS = ['Capô', 'Para-choque dianteiro', 'Para-choque traseiro', 'Para-lama dianteiro esquerdo', 'Para-lama dianteiro direito',
     'Para-lama traseiro esquerdo', 'Para-lama traseiro direito', 'Porta dianteira esquerda', 'Porta dianteira direita', 'Porta traseira esquerda',
     'Porta traseira direita', 'Porta-malas / caçamba', 'Teto', 'Retrovisor esquerdo', 'Retrovisor direito', 'Para-brisa', 'Vidro lateral',
@@ -14,7 +14,7 @@ const CK = (() => {
   const nomeComb = i => i == null ? '' : i === 0 ? 'Vazio (E)' : i === 8 ? 'Cheio (F)' : i === 4 ? 'Meio tanque' : NIV[i] + ' do tanque';
   const ruim = v => !!v && v !== 'C' && v !== 'NA';
   const defeito = v => v === 'NC' || v === 'Q';
-  const tag = s => `<span class="pill ${SIT[s][1]}">${SIT[s][0]}</span>`;
+  const tag = s => { const x = SIT[s] || [s, 'cinza']; return `<span class="pill ${x[1]}">${x[0]}</span>`; };
   const hora = t => t ? new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
 
   let D = null, V = { tela: 'home' }, d = null, aut = [], port = null, blq = [], conf = {}, rec = null, dq = null, nl = null;
@@ -306,12 +306,12 @@ const CK = (() => {
   // ---------- veículos bloqueados ----------
   function telaBlq() {
     let h = appbar('Veículos bloqueados', quem()) + '<div class="pane">' + aviso() + '<div class="who" style="margin-top:-4px">Depois do conserto, descreva o que foi feito e desbloqueie. O veículo volta para a lista de disponíveis.</div><div class="peds">';
-    h += blq.map(v => { const q = dq && dq.placa === v.placa ? dq : null;
-      return `<div class="ped"><div class="ped-h"><b class="placa">${esc(v.placa)}</b><span class="pill venc">Bloqueado</span></div><div class="ped-d">${esc(v.modelo || '')}<br><span class="bad">${esc(v.motivo || '')}</span>${v.numero ? `<br><span class="mut">Checklist ${esc(v.numero)}</span>` : ''}</div>
+    h += blq.map(v => { const q = dq && dq.placa === v.placa ? dq : null, man = v.situacao === 'man';
+      return `<div class="ped"><div class="ped-h"><b class="placa">${esc(v.placa)}</b>${man ? '<span class="pill man">Em manutenção</span>' : '<span class="pill venc">Bloqueado</span>'}</div><div class="ped-d">${esc(v.modelo || '')}<br>${man ? `<span class="mtxt">${esc(v.motivo || '')}</span>${v.por ? `<br><span class="mut">Colocado por ${esc(v.por)}${v.em ? ' · ' + esc(fdt(v.em)) : ''}${v.foto ? ' · com foto no painel' : ''}</span>` : ''}` : `<span class="bad">${esc(v.motivo || '')}</span>`}${v.numero ? `<br><span class="mut">Checklist ${esc(v.numero)}</span>` : ''}</div>
         ${q ? `<div class="field" style="margin-top:8px"><label for="dq-desc">O que foi feito</label><input id="dq-desc" data-in="dqDesc" placeholder="Ex.: lâmpada de freio trocada" value="${esc(q.desc || '')}"></div>${q.erro ? `<div class="err" style="text-align:left">${esc(q.erro)}</div>` : ''}
           <div class="ped-act"><button type="button" class="btn btn-sm btn-ghost" data-act="dqVoltar">Voltar</button><button type="button" class="btn btn-sm btn-main" data-act="dqOk" data-v="${esc(v.placa)}">Desbloquear veículo</button></div>`
-          : `<div class="ped-act"><button type="button" class="btn btn-sm btn-main" data-act="desbloquear" data-v="${esc(v.placa)}">Consertado, desbloquear</button></div>`}</div>`; }).join('')
-      || '<div class="vazio"><b>Nenhum veículo bloqueado</b><span>Quando um checklist tiver item crítico com problema, o veículo aparece aqui.</span></div>';
+          : `<div class="ped-act"><button type="button" class="btn btn-sm btn-main" data-act="desbloquear" data-v="${esc(v.placa)}">${man ? 'Pronto, desbloquear' : 'Consertado, desbloquear'}</button></div>`}</div>`; }).join('')
+      || '<div class="vazio"><b>Nenhum veículo bloqueado</b><span>Aparecem aqui os veículos bloqueados por checklist e os que a liderança colocou em manutenção.</span></div>';
     return h + '</div></div>';
   }
 

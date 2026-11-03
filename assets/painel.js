@@ -527,10 +527,10 @@ async function renderFotos() {
 }
 
 // pastas do .zip e nomes no indice.csv (checklist e escadas vêm do 12_fotos_checklist.sql)
-const PASTA = { abastecimento: 'abastecimentos', troca: 'trocas-de-oleo', checklist: 'checklists', escada: 'escadas' };
-const ROT_FOTO = { item: 'Item com problema', avaria: 'Avaria', escada: 'Escada com NC', recusa: 'Recusa', foto: 'Foto' };
+const PASTA = { abastecimento: 'abastecimentos', troca: 'trocas-de-oleo', checklist: 'checklists', escada: 'escadas', manutencao: 'manutencoes' };
+const ROT_FOTO = { item: 'Item com problema', avaria: 'Avaria', escada: 'Escada com NC', recusa: 'Recusa', foto: 'Foto', manutencao: 'Manutenção' };
 const rotuloFoto = k => { const m = /^([a-z]+)(\d*)$/.exec(k); return m && ROT_FOTO[m[1]] ? ROT_FOTO[m[1]] + (m[2] ? ' ' + m[2] : '') : k; };
-const TIPO_FOTO = { abastecimento: 'Abastecimento', troca: 'Troca de óleo', checklist: 'Checklist', escada: 'Inspeção de escada' };
+const TIPO_FOTO = { abastecimento: 'Abastecimento', troca: 'Troca de óleo', checklist: 'Checklist', escada: 'Inspeção de escada', manutencao: 'Manutenção' };
 async function baixarZip(mes, btn) {
   const txt = btn.textContent; btn.disabled = true; ocupadoFotos = true;
   try {
@@ -585,6 +585,7 @@ async function excluirMes(mes, btn) {
     const arq = { p_abast: ok.filter(r => r.tipo === 'abastecimento').map(r => r.id), p_trocas: ok.filter(r => r.tipo === 'troca').map(r => r.id) };
     const cks = ok.filter(r => r.tipo === 'checklist').map(r => r.id), insp = ok.filter(r => r.tipo === 'escada').map(r => r.id);
     if (cks.length || insp.length) Object.assign(arq, { p_cks: cks, p_insp: insp });
+    const man = ok.filter(r => r.tipo === 'manutencao').map(r => r.id); if (man.length) arq.p_man = man;
     await rpc('painel_marcar_arquivadas', arq);
     baixados.delete(mes); confirmando = null;
     if (ok.length < regs.length) toast(`Excluídas as fotos de ${ok.length} de ${regs.length} registros. Tente de novo para o restante.`, true);

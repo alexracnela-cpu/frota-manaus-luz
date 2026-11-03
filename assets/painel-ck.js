@@ -3,14 +3,14 @@
 const PCK = (() => {
   const CAT = { cesto: 'Cesto', munk: 'Munck', leve: 'Frota leve', moto: 'Moto' };
   const SIT = { disp: ['Disponível', 'ok'], aut: ['Aguardando autorização', 'prox'], port: ['Aguardando portaria', 'prox'],
-    uso: ['Em uso', 'info'], volta: ['Volta a conferir', 'prox'], blq: ['Bloqueado', 'venc'] };
+    uso: ['Em uso', 'info'], volta: ['Volta a conferir', 'prox'], blq: ['Bloqueado', 'venc'], man: ['Em manutenção', 'man'] };
   const SIT_CK = { aut: 'Aguardando autorização', port: 'Aguardando portaria', uso: 'Em uso', volta: 'Volta a conferir', fim: 'Concluído',
     recusado: 'Não autorizado', barrado: 'Não liberado na portaria', bloqueado: 'Bloqueado na saída', cancelado: 'Cancelado', encerrado: 'Encerrado manualmente' };
-  const ORD = { blq: 0, aut: 1, port: 2, volta: 3, uso: 4, disp: 5 };
+  const ORD = { blq: 0, man: 0.5, aut: 1, port: 2, volta: 3, uso: 4, disp: 5 };
   const TIPO_AL = { nc: 'Item com problema', falta: 'Falta na volta', avaria: 'Avaria nova', diferenca: 'Contagem diferente', bloqueio: 'Veículo bloqueado', recusa: 'Saída recusada' };
   const AV = { R: 'Riscado', A: 'Amassado', Q: 'Quebrado' };
   const NIV = ['E', '1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8', 'F'];
-  const tag = s => `<span class="pill ${SIT[s][1]}">${SIT[s][0]}</span>`;
+  const tag = s => { const x = SIT[s] || [s, 'cinza']; return `<span class="pill ${x[1]}">${x[0]}</span>`; };
   const dt = t => t ? fdt(t) : '—';
   const ruim = v => !!v && v !== 'C' && v !== 'NA';
   const LOCAIS = ['Capô', 'Para-choque dianteiro', 'Para-choque traseiro', 'Para-lama dianteiro esquerdo', 'Para-lama dianteiro direito',
@@ -21,6 +21,8 @@ const PCK = (() => {
 
   let A = null, F = null, E = null, CAD = null, PP = [], AUD = null;
   let ordem = 'sit', busca = { offset: 0 }, buscaE = { offset: 0 }, res = null, resE = null, rec = null, enc = null, dq = null, excl = null;
+  let M = {}, mf = null;   // manutenções abertas por placa e o formulário "Colocar em manutenção" (22_manutencao.sql)
+  const MOTIVOS_MAN = ['Revisão na concessionária', 'Revisão preventiva', 'Troca de pneus', 'Funilaria', 'Elétrica', 'Mecânica'];
   try { ordem = localStorage.getItem('fleet_ordem') || 'sit'; } catch (_) {}
 
   // ---------- abas ----------
@@ -64,11 +66,13 @@ const PCK = (() => {
   async function carregarCk(silencioso) {
     if (!silencioso) $('tab-ck').innerHTML = '<p class="note">Carregando…</p>';
     let novo;
+    let man = {};
     try { novo = await rpc('painel_ck_frota'); }
     catch (e) { if (!silencioso) $('tab-ck').innerHTML = `<div class="alert">${esc(e.message)}</div>`; return; }
-    const a = JSON.stringify(novo); if (silencioso && a === assF) return;
-    assF = a; F = novo;
-    try { await assinarFotos([...fotosDe(F.atencao), ...fotosDe(F.avarias), ...fotosDe(F.autorizacoes)]); } catch (_) {}
+    try { man = await rpc('painel_manutencoes') || {}; } catch (_) { man = {}; }   // banco ainda sem o 22: segue sem manutenção
+    const a = JSON.stringify([novo, man]); if (silencioso && a === assF) return;
+    assF = a; F = novo; M = man;
+    try { await assinarFotos([...fotosDe(F.atencao), ...fotosDe(F.avarias), ...fotosDe(F.autorizacoes), ...fotosDe(M)]); } catch (_) {}
     if (!res) await buscar();
     pintaCk();
   }
@@ -106,7 +110,7 @@ const PCK = (() => {
     const vs = F.veiculos.slice().sort((a, b) => ordem === 'placa' ? a.placa.localeCompare(b.placa)
       : ordem === 'cat' ? (a.modelo_ck.localeCompare(b.modelo_ck) || a.placa.localeCompare(b.placa)) : (ORD[a.situacao] - ORD[b.situacao] || a.placa.localeCompare(b.placa)));
     const n = s => F.veiculos.filter(v => v.situacao === s).length;
-    return `<div class="card"><div class="card-h"><h2>Situação da frota</h2><span class="sub">${n('disp')} disponíveis · ${n('uso')} em uso · ${n('aut') + n('port') + n('volta')} aguardando · ${n('blq')} bloqueados</span>
+    return `<div class="card"><div class="card-h"><h2>Situação da frota</h2><span class="sub">${n('disp')} disponíveis · ${n('uso')} em uso · ${n('aut') + n('port') + n('volta')} aguardando · ${n('blq')} bloqueados${n('man') ? ` · ${n('man')} em manutenção` : ''}</span>
       <div class="chips" style="margin-left:auto">${[['sit', 'Por situação'], ['cat', 'Por categoria'], ['placa', 'Por placa']].map(([k, t]) => `<button type="button" class="chip" data-a="ordem" data-v="${k}" aria-pressed="${ordem === k}">${t}</button>`).join('')}</div></div>
       <div class="tbl-wrap"><table><thead><tr><th>Veículo</th><th>Situação</th><th>Com quem / desde</th><th>Km</th><th></th></tr></thead><tbody>${vs.map(v => {
         const e = enc && enc.ck === v.ck ? enc : null, q = dq && dq.placa === v.placa ? dq : null;
@@ -114,9 +118,30 @@ const PCK = (() => {
         let act = ckv ? `<button type="button" class="linkbtn" data-a="folha" data-v="${ckv}">Ver checklist</button>` : '';
         if (A.opera && ['aut', 'port'].includes(v.situacao)) act += ` <button type="button" class="btn btn-sm btn-ghost" data-a="cancelar" data-v="${v.ck}">Cancelar</button>`;
         if (A.opera && ['uso', 'volta'].includes(v.situacao)) act += e ? `<div class="enc"><input data-i="encMotivo" placeholder="Motivo (obrigatório)" value="${esc(e.motivo || '')}"><input data-i="encKm" class="num" inputmode="numeric" placeholder="Km atual (opcional)" value="${esc(e.km || '')}">${e.erro ? `<span class="bad">${esc(e.erro)}</span>` : ''}<div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="encVoltar">Voltar</button><button type="button" class="btn btn-sm btn-warn" data-a="encOk" data-v="${v.ck}">Encerrar</button></div></div>` : ` <button type="button" class="btn btn-sm btn-ghost" data-a="encerrar" data-v="${v.ck}">Encerrar</button>`;
-        if (A.opera && v.situacao === 'blq') act += q ? `<div class="enc"><input data-i="dqDesc" placeholder="O que foi feito (obrigatório)" value="${esc(q.desc || '')}">${q.erro ? `<span class="bad">${esc(q.erro)}</span>` : ''}<div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="dqVoltar">Voltar</button><button type="button" class="btn btn-sm btn-main" data-a="dqOk" data-v="${esc(v.placa)}">Desbloquear</button></div></div>` : ` <button type="button" class="btn btn-sm btn-main" data-a="desbloquear" data-v="${esc(v.placa)}">Desbloquear</button>`;
-        return `<tr><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || '')} · ${CAT[v.modelo_ck]}</small></td><td>${tag(v.situacao)}${v.situacao === 'blq' && v.bloqueio ? `<br><small class="bad">${esc(v.bloqueio.motivo || '')}</small>` : ''}${v.situacao === 'aut' && v.autorizador ? `<br><small class="mut">aguardando ${esc(v.autorizador)}</small>` : ''}</td>
+        act += acoesManut(v);
+        if (A.opera && ['blq', 'man'].includes(v.situacao)) act += q ? `<div class="enc"><input data-i="dqDesc" placeholder="O que foi feito (obrigatório)" value="${esc(q.desc || '')}">${q.erro ? `<span class="bad">${esc(q.erro)}</span>` : ''}<div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="dqVoltar">Voltar</button><button type="button" class="btn btn-sm btn-main" data-a="dqOk" data-v="${esc(v.placa)}">Desbloquear</button></div></div>` : ` <button type="button" class="btn btn-sm btn-main" data-a="desbloquear" data-v="${esc(v.placa)}">Desbloquear</button>`;
+        return `<tr><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || '')} · ${CAT[v.modelo_ck]}</small></td><td>${tag(v.situacao)}${v.situacao === 'blq' && v.bloqueio ? `<br><small class="bad">${esc(v.bloqueio.motivo || '')}</small>` : ''}${infoManut(v)}${v.situacao === 'aut' && v.autorizador ? `<br><small class="mut">aguardando ${esc(v.autorizador)}</small>` : ''}</td>
           <td>${v.com ? `${esc(v.com)}<br><small class="mut num">${dt(v.desde)}</small>` : '—'}</td><td class="num">${v.km ? fmt(v.km) : '—'}</td><td>${act}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+  }
+  // ---------- em manutenção ----------
+  function infoManut(v) {
+    const m = M[v.placa]; if (!m) return '';
+    if (v.situacao === 'man') return `<br><small class="mtxt">${esc(m.motivo)}</small><br><small class="mut">por ${esc(m.por || '—')} · ${dt(m.inicio_em || m.marcado_em)}</small>${m.foto ? `<br>${thumb(m.foto)}` : ''}`;
+    if (m.ao_voltar) return `<br><span class="pill man-v">Manutenção ao voltar</span><br><small class="mtxt">${esc(m.motivo)}</small>`;
+    return '';
+  }
+  function acoesManut(v) {
+    if (!A.opera) return '';
+    const m = M[v.placa];
+    if (m && m.ao_voltar) return ` <button type="button" class="btn btn-sm btn-ghost" data-a="manDesmarcar" data-v="${esc(v.placa)}">Desmarcar manutenção</button>`;
+    if (m || !['disp', 'uso', 'volta'].includes(v.situacao)) return '';
+    const f = mf && mf.placa === v.placa ? mf : null, fora = v.situacao !== 'disp';
+    if (!f) return ` <button type="button" class="btn btn-sm btn-ghost" data-a="manAbrir" data-v="${esc(v.placa)}">Colocar em manutenção</button>`;
+    return `<div class="manf">${fora ? '<small class="mut">Está fora: entra em manutenção quando o porteiro conferir a volta.</small>' : ''}
+      <input data-i="manMotivo" list="man-sug" placeholder="Motivo (ex.: revisão na concessionária)" value="${esc(f.motivo || '')}"><datalist id="man-sug">${MOTIVOS_MAN.map(x => `<option value="${x}">`).join('')}</datalist>
+      <label class="btn btn-sm btn-ghost" style="justify-self:start">${f.foto ? 'Foto anexada ✓' : 'Anexar foto (opcional)'}<input type="file" accept="image/*" data-foto="man" hidden></label>
+      ${f.erro ? `<span class="bad">${esc(f.erro)}</span>` : ''}
+      <div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="manVoltar">Voltar</button><button type="button" class="btn btn-sm btn-man" data-a="manOk" data-v="${esc(v.placa)}">${fora ? 'Marcar para quando voltar' : 'Colocar em manutenção'}</button></div></div>`;
   }
   function cardAvarias() {
     const L = F.avarias;
@@ -444,10 +469,18 @@ const PCK = (() => {
       case 'encVoltar': enc = null; return pintaCk();
       case 'encOk': { if (!(enc.motivo || '').trim()) { enc.erro = 'Escreva o motivo.'; return pintaCk(); } const km = enc.km ? +String(enc.km).replace(/\D/g, '') : null;
         if (await vai(() => rpc('painel_ck_encerrar', { p_ck: +v, p_motivo: enc.motivo, p_km: km }), 'Encerrado. Veículo disponível.')) { enc = null; carregarCk(); } return; }
-      case 'desbloquear': dq = { placa: v }; return pintaCk();
+      case 'desbloquear': dq = { placa: v }; mf = null; return pintaCk();
+      case 'manAbrir': mf = { placa: v }; dq = null; enc = null; return pintaCk();
+      case 'manVoltar': mf = null; return pintaCk();
+      case 'manOk': { if (!(mf.motivo || '').trim()) { mf.erro = 'Escreva o motivo.'; return pintaCk(); }
+        if (await vai(async () => { const foto = mf.foto ? await enviarFoto(mf.foto, 'manutencao') : null;
+            const r = await rpc('painel_manutencao', { p_placa: v, p_motivo: mf.motivo.trim(), p_foto: foto });
+            toast(r && r.ao_voltar ? 'Marcado. Entra em manutenção quando o porteiro conferir a volta.' : 'Veículo em manutenção. Os mecânicos foram avisados.'); })) { mf = null; carregarCk(); } return; }
+      case 'manDesmarcar': if (!confirm(`Desmarcar a manutenção do ${v}? Ele volta normal quando chegar.`)) return;
+        if (await vai(() => rpc('painel_manutencao_desmarcar', { p_placa: v }), 'Manutenção desmarcada.')) carregarCk(); return;
       case 'dqVoltar': dq = null; return pintaCk();
       case 'dqOk': if (!(dq.desc || '').trim()) { dq.erro = 'Escreva o que foi feito.'; return pintaCk(); }
-        if (await vai(() => rpc('painel_desbloquear', { p_placa: v, p_desc: dq.desc }), 'Veículo desbloqueado.')) { dq = null; carregarCk(); } return;
+        if (await vai(() => rpc('painel_desbloquear', { p_placa: v, p_desc: dq.desc }), M[v] ? (M[v].ao_voltar ? 'Desbloqueado. Como estava marcado, entrou em manutenção.' : 'Saiu da manutenção. Veículo disponível.') : 'Veículo desbloqueado.')) { dq = null; carregarCk(); } return;
       case 'buscar': busca.offset = 0; await buscar(); return pintaCk();
       case 'limpar': busca = { offset: 0 }; await buscar(); return pintaCk();
       case 'mais': busca.offset += 20; await buscar(); return pintaCk();
@@ -483,7 +516,7 @@ const PCK = (() => {
   }
   function entrada(el) {
     const k = el.dataset.i, val = el.value;
-    if (k === 'recDesc') rec.desc = val; else if (k === 'encMotivo') enc.motivo = val; else if (k === 'encKm') enc.km = val; else if (k === 'dqDesc') dq.desc = val;
+    if (k === 'recDesc') rec.desc = val; else if (k === 'encMotivo') enc.motivo = val; else if (k === 'encKm') enc.km = val; else if (k === 'dqDesc') dq.desc = val; else if (k === 'manMotivo') { mf.motivo = val; mf.erro = ''; }
     else if (k === 'bTxt') busca.txt = val; else if (k === 'bDe') busca.de = val; else if (k === 'bAte') busca.ate = val; else if (k === 'bPlaca') busca.placa = val; else if (k === 'bSit') busca.sit = val; else if (k === 'bProb') busca.prob = val;
     else if (k === 'beTxt') buscaE.txt = val; else if (k === 'beDe') buscaE.de = val; else if (k === 'beAte') buscaE.ate = val; else if (k === 'beNum') buscaE.num = val; else if (k === 'beRes') buscaE.res = val;
     else if (k === 'filtroP') { filtroP = val; pintaCad(); const i = document.querySelector('[data-i=filtroP]'); i.focus(); i.setSelectionRange(val.length, val.length); }
@@ -497,6 +530,7 @@ const PCK = (() => {
       if (t.id === 'pp-mot') { const ok = lerPapel().dados.motorista; $('pp-mot-ok').textContent = t.value && !ok ? 'Escolha um nome da lista.' : ''; } });
     document.addEventListener('input', e => { if (e.target.closest && e.target.closest('.papel')) papelSujo = true; });
     document.addEventListener('change', async e => { if (e.target.dataset && e.target.dataset.foto === 'rec' && e.target.files[0]) { try { rec.foto = await reduzir(e.target.files[0]); pintaCk(); } catch (err) { toast(err.message, true); } } });
+    document.addEventListener('change', async e => { if (e.target.dataset && e.target.dataset.foto === 'man' && e.target.files[0] && mf) { try { mf.foto = await reduzir(e.target.files[0]); pintaCk(); } catch (err) { toast(err.message, true); } } });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('ck-modal').hidden && sairPapel()) fecharModal(); if (e.key === 'Enter' && e.target.dataset && /^(bTxt|beTxt)$/.test(e.target.dataset.i || '')) act(e.target.dataset.i === 'bTxt' ? 'buscar' : 'buscarE', e.target); });
     $('ck-modal').addEventListener('click', e => { if (e.target.id === 'ck-modal' && sairPapel()) fecharModal(); });
   }

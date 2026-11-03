@@ -227,3 +227,16 @@ body.fundo-pc>#ck-modal{position:fixed;z-index:60}
 .pp-pe{font-size:12px;margin-top:2px}
 .pp-rod{display:flex;justify-content:flex-end;gap:8px;align-items:center;flex-wrap:wrap}
 .tag-papel{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--amb-soft);color:var(--amb);white-space:nowrap}
+
+/* Em manutenção (22_manutencao.sql): cor própria, separada do laranja de Bloqueado */
+:root{--man:#6a3fb5;--man-soft:#ece4f8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--man:#b79cf0;--man-soft:#2c2342}}
+:root[data-theme="dark"]{--man:#b79cf0;--man-soft:#2c2342}
+.pill.man{background:var(--man-soft);color:var(--man)}
+.pill.man-v{background:transparent;color:var(--man);border:1.5px dashed var(--man)}
+.mtxt{color:var(--man);font-weight:500}
+.manf{display:grid;gap:6px;margin-top:6px;text-align:left;min-width:250px}
+.manf input:not([type]){padding:7px 9px;border-radius:8px;border:1.5px solid var(--man);background:var(--surface);font-size:13px;color:var(--fg)}
+.btn-man{background:var(--man);color:#fff}
+:root[data-theme="dark"] .btn-man{color:#1a1030}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn-man{color:#1a1030}}

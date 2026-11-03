@@ -143,7 +143,8 @@ async function abrirMenu(direto) {
   etq('m-ck-etq', eu.em_uso, eu.em_uso === 1 ? '1 veículo com você' : eu.em_uso + ' veículos com você');
   etq('m-aut-etq', eu.aut_qtd, eu.aut_qtd === 1 ? '1 aguardando você' : eu.aut_qtd + ' aguardando você');
   etq('m-port-etq', eu.port_qtd, eu.port_qtd === 1 ? '1 para conferir' : eu.port_qtd + ' para conferir');
-  etq('m-blq-etq', eu.blq_qtd, eu.blq_qtd === 1 ? '1 bloqueado' : eu.blq_qtd + ' bloqueados');
+  { const b = eu.blq_qtd || 0, m = eu.man_qtd || 0;   // man_qtd: 22_manutencao.sql
+    etq('m-blq-etq', b + m, [b ? (b === 1 ? '1 bloqueado' : b + ' bloqueados') : '', m ? m + ' em manutenção' : ''].filter(Boolean).join(' · ')); }
   $('m-ol-etq').textContent = !eu.oleo_qtd ? '' : eu.mecanico ? `${eu.oleo_qtd} ${eu.oleo_qtd === 1 ? 'veículo aprovado' : 'veículos aprovados'}` : `${eu.oleo_qtd === 1 ? '1 veículo autorizado' : eu.oleo_qtd + ' veículos autorizados'} para você`;
   $('m-ol-etq').hidden = !eu.oleo_qtd;
   $('m-vazio').hidden = qtdAcessos() > 0; $('m-mods').hidden = qtdAcessos() === 0;

@@ -58,6 +58,10 @@ async function enviarFoto(blob, rotulo) {
   if (tk) {
     try { await rpc('campo_liberar_foto', { p_token: tk, p_nome: caminho }); }
     catch (e) { if (!/ainda não foi atualizado/.test(e.message || '')) throw new Error('Não consegui enviar a foto (' + rotulo + '). ' + e.message); }
+  } else {
+    // painel (login por e-mail): liberação pelo usuário logado (22_manutencao.sql)
+    try { await rpc('painel_liberar_foto', { p_nome: caminho }); }
+    catch (e) { if (!/ainda não foi atualizado/.test(e.message || '')) throw new Error('Não consegui enviar a foto (' + rotulo + '). ' + e.message); }
   }
   const { error } = await sb.storage.from('fotos').upload(caminho, blob, { contentType: 'image/jpeg', upsert: false });
   if (error) throw new Error('Não consegui enviar a foto (' + rotulo + '). ' + msgErro(error));
