@@ -325,3 +325,7 @@ body.fundo-pc .card,body.fundo-pc .kpi{box-shadow:0 4px 18px rgba(11,40,90,.08)}
 .n-item b{font-weight:600;color:var(--fg)}
 .n-item small{font-size:13px;color:var(--muted)}
 .n-item:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+
+.busca-pes{display:flex;align-items:center;gap:10px;margin:4px 0 10px}
+.busca-pes input{flex:1;max-width:360px;background:var(--surface);color:var(--fg);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px}
+.busca-pes input:focus{outline:2px solid var(--accent);outline-offset:1px}
