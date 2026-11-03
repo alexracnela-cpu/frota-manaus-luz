@@ -80,7 +80,7 @@ const PCK = (() => {
     const ver = A.opera || (eu && eu.papeis.includes('gerente')), h = [];
     if (F.autorizacoes.length) h.push(`<div class="card" style="border:2px solid var(--accent)"><div class="card-h"><h2>Aguardando sua autorização</h2><span class="sub">${F.autorizacoes.length} pedido(s)</span></div><div class="peds">${F.autorizacoes.map(cardAut).join('')}</div></div>`);
     if (ver) h.push(cardAtencao());
-    h.push(cardFrota());
+    h.push(resumoFrota(), cardFrota());
     if (ver) h.push(cardAvarias(), cardBusca());
     $('tab-ck').innerHTML = h.join('');
   }
@@ -105,6 +105,14 @@ const PCK = (() => {
       ${L.length ? `<div class="tbl-wrap"><table><thead><tr><th>Quando</th><th>Veículo</th><th>Aviso</th><th>Foto</th><th></th></tr></thead><tbody>${L.map(a => `<tr><td class="num">${dt(a.em)}</td><td><b>${esc(a.placa || '')}</b><br><small class="mut">${esc(a.motorista || '')}</small></td>
         <td><span class="pill ${a.tipo === 'bloqueio' || a.tipo === 'falta' ? 'venc' : 'prox'}">${TIPO_AL[a.tipo] || a.tipo}</span><br>${esc(a.texto)}</td><td>${thumb(a.foto)}</td>
         <td style="white-space:nowrap">${a.ck ? `<button type="button" class="linkbtn" data-a="folha" data-v="${a.ck}">Ver</button>` : ''}${A.opera ? ` <button type="button" class="btn btn-sm btn-ghost" data-a="ciente" data-v="${a.id}">Ciente</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="mut">Quando aparecer item com problema, falta na volta, avaria nova ou bloqueio, o aviso aparece aqui.</p>'}</div>`;
+  }
+  // cartões de resumo acima da Situação da frota
+  function resumoFrota() {
+    const n = s => F.veiculos.filter(v => v.situacao === s).length, ag = n('aut') + n('port') + n('volta');
+    const k = (cls, l, v, s) => `<div class="kpi ${cls}"><span class="l">${l}</span><span class="v">${v}</span><span class="s">${s}</span></div>`;
+    return `<div class="kpis kpis-ck">${k('', 'Disponíveis', n('disp'), 'prontos para sair')}${k('', 'Em uso', n('uso'), 'na rua agora')}
+      ${k('', 'Aguardando', ag, 'autorização ou portaria')}${k(n('blq') ? 'flag' : '', 'Bloqueados', n('blq'), 'item crítico com problema')}
+      ${k(n('man') ? 'mflag' : '', 'Em manutenção', n('man'), 'colocados pela liderança')}</div>`;
   }
   function cardFrota() {
     const vs = F.veiculos.slice().sort((a, b) => ordem === 'placa' ? a.placa.localeCompare(b.placa)

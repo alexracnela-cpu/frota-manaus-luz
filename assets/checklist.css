@@ -240,3 +240,9 @@ body.fundo-pc>#ck-modal{position:fixed;z-index:60}
 .btn-man{background:var(--man);color:#fff}
 :root[data-theme="dark"] .btn-man{color:#1a1030}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn-man{color:#1a1030}}
+
+/* cartões de resumo da aba Checklist */
+.kpis-ck{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.kpi.mflag{position:relative;overflow:hidden;padding-top:20px;border-color:var(--man);background:var(--man-soft)}
+.kpi.mflag .v{color:var(--man)}
+.kpi.mflag::before{content:"";position:absolute;inset:0 0 auto;height:6px;background:repeating-linear-gradient(-45deg,var(--man) 0 8px,transparent 8px 16px)}
