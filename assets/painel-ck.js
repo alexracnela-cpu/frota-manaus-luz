@@ -231,7 +231,7 @@ const PCK = (() => {
   // folha A4 com a situação da frota: uma lista só, para caber numa folha (botão Imprimir da Situação da frota)
   // cesto: altura pelo modelo (VW 9.170 = 13 m, VW 14.190 = 16 m, VW 24.260 = 26 m)
   const METROS = [[/9\.?170/, 13], [/14\.?190/, 16], [/24\.?260/, 26]];
-  const catDe = v => { const c = CAT[v.modelo_ck] || ''; if (v.modelo_ck !== 'cesto') return c; const m = METROS.find(([r]) => r.test(v.modelo || '')); return m ? `${c} ${m[1]} m` : c; };
+  const catDe = v => { const c = CAT[v.modelo_ck] || ''; if (v.modelo_ck !== 'cesto') return c; const d = /(\d{1,2})\s*m\b/i.exec(v.modelo || ''), m = d ? [0, +d[1]] : METROS.find(([r]) => r.test(v.modelo || '')); return m ? `${c} ${m[1]} m` : c; };
   function folhaFrota() {
     const OF = { disp: 0, uso: 1, aut: 2, port: 3, volta: 4, blq: 5, man: 6 };   // na folha, disponíveis primeiro
     const vs = F.veiculos.slice().sort((a, b) => (OF[a.situacao] ?? 9) - (OF[b.situacao] ?? 9) || a.modelo_ck.localeCompare(b.modelo_ck) || a.placa.localeCompare(b.placa));
