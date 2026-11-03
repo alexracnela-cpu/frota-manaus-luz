@@ -405,7 +405,7 @@ function renderCad() {
   const ord = PE.slice().sort((a, b) => ((b.ativo && usaCelular(b) && !b.re) - (a.ativo && usaCelular(a) && !a.re)) || (b.ativo - a.ativo) || a.nome.localeCompare(b.nome));
   const semRe = PE.filter(p => p.ativo && usaCelular(p) && !p.re).length;
   $('pes-sub').innerHTML = semRe ? `<span class="bad">${semRe} ${semRe === 1 ? 'pessoa do celular está' : 'pessoas do celular estão'} sem RE</span>` : '';
-  $('t-pessoas').innerHTML = ord.map(p => `<tr class="${p.ativo ? '' : 'inativo'}"><td><b>${esc(p.nome)}</b><br><small class="mut">${esc(p.funcao || '')}${p.email ? ' · ' + esc(p.email) : ''}</small></td><td class="num">${p.re ? esc(p.re) : p.ativo ? '<span class="bad">falta RE</span>' : '—'}</td><td>${p.papeis.map(x => `<span class="pill info" style="margin:1px">${esc((NOME_PAPEL[x] || x).split(' (')[0])}</span>`).join(' ')}</td><td>${p.ativo && usaCelular(p) ? situacaoPin(p) : ''}</td><td><button type="button" class="btn btn-sm btn-ghost" data-edp="${p.id}">Editar</button></td></tr>`).join('');
+  $('t-pessoas').innerHTML = ord.map(p => `<tr class="${p.ativo ? '' : 'inativo'}"><td><b>${esc(p.nome)}</b><br><small class="mut">${esc(p.funcao || '')}${p.email ? ' · ' + esc(p.email) : ''}</small></td><td class="num">${p.re ? esc(p.re) : p.ativo ? '<span class="bad">falta RE</span>' : '—'}</td><td>${p.papeis.map(x => `<span class="pill info" style="margin:1px">${esc((NOME_PAPEL[x] || x).split(' (')[0])}</span>`).join(' ')}</td><td>${p.ativo ? situacaoPin(p) : ''}</td><td><button type="button" class="btn btn-sm btn-ghost" data-edp="${p.id}">Editar</button></td></tr>`).join('');
   $('t-veics').innerHTML = VE.map(v => `<tr class="${v.ativo ? '' : 'inativo'}"><td><b>${esc(v.placa)}</b></td><td>${esc(v.modelo || '')}${v.fabricante ? ` <small class="mut">· ${esc(v.fabricante)}</small>` : ''}<br><small class="mut">${esc(v.tipo || '')}</small></td><td>${esc(v.categoria)}${v.categoria === 'Leve' ? ` <small class="mut">· ${v.portas === 2 ? 2 : 4} portas</small>` : ''}${v.garantia ? ' <span class="pill gar">Garantia</span>' : ''}</td><td class="r num">${v.intervalo_km ? fmt(v.intervalo_km) : '—'}</td><td>${v.frota_pesada ? 'Sim' : ''}</td><td><button type="button" class="btn btn-sm btn-ghost" data-edv="${esc(v.placa)}">Editar</button></td></tr>`).join('');
   const tipos = [['estabelecimento', 'Locais da troca'], ['oleo', 'Tipos de óleo'], ['funcao', 'Funções (motorista ou outro)']];
   $('listas').innerHTML = tipos.map(([t, n]) => `<div style="margin-bottom:14px"><b>${n}</b><div class="chips-lista">${LI.filter(l => l.tipo === t).map(l => `<span>${esc(l.valor)}<button type="button" data-rml="${t}" data-v="${esc(l.valor)}" aria-label="Remover ${esc(l.valor)}">×</button></span>`).join('')}</div><div class="linha-btn" style="margin-top:8px"><input id="nl-${t}" placeholder="Adicionar" style="padding:6px 8px;border-radius:6px;border:1.5px solid var(--line);background:var(--surface)"><button type="button" class="btn btn-sm btn-ghost" data-addl="${t}">Adicionar</button></div></div>`).join('');
@@ -418,10 +418,10 @@ function abrirPessoa(p) {
   pintaPinBox(p); $('p-nome').focus();
 }
 function pintaPinBox(p) {
-  $('p-pin-box').hidden = !p || !usaCelular(p);
+  $('p-pin-box').hidden = !p;
   if (!p) return;
   $('p-pin-sit').innerHTML = situacaoPin(p);
-  $('p-pin-zerar').hidden = !p.tem_pin;
+  $('p-pin-zerar').hidden = false;
 }
 $('nova-pessoa').onclick = () => abrirPessoa(null);
 $('p-cancelar').onclick = () => { $('f-pessoa').hidden = true; };
