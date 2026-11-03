@@ -248,10 +248,10 @@ body.fundo-pc>#ck-modal{position:fixed;z-index:60}
 .kpi.mflag::before{content:"";position:absolute;inset:0 0 auto;height:6px;background:repeating-linear-gradient(-45deg,var(--man) 0 8px,transparent 8px 16px)}
 
 /* folha da situação da frota: lista compacta para caber em uma folha A4 */
-.folha-frota .fcards{margin-top:10px}
+.folha-frota .fcards{margin-top:8px}
 .folha-frota .fcard{padding:5px 8px}
 .folha-frota th{padding:4px 6px;font-size:10px}
-.folha-frota td{padding:2px 6px;font-size:10.5px;line-height:1.2}
+.folha-frota td{padding:1px 8px;font-size:10px;line-height:1.25}
 .folha-frota .ftopo{padding-top:12px;padding-bottom:10px}
 .folha-frota .frod{margin-top:6px;padding-top:6px}
 .folha-frota tbody tr:nth-child(even) td{background:#f6f8fc}
@@ -266,3 +266,13 @@ body.fundo-pc>#ck-modal{position:fixed;z-index:60}
 .ff-cols table{width:100%}
 @media print{.folha-frota .ff-cols table{break-inside:auto}body.com-modal .modal-caixa:has(.folha-frota){width:auto;max-width:none}}
 .folha-frota td small{font-size:9.5px}
+@media print{.folha-frota table{break-inside:auto}}
+/* folha deitada da frota: mais compacta para caber em uma página */
+@page paisagem{size:A4 landscape;margin:6mm}
+.folha-frota .ftopo{padding-top:8px;padding-bottom:6px}
+.folha-frota .ftopo h2{font-size:21px}
+.folha-frota .flogos img{max-height:30px}
+.folha-frota .fcard{padding:3px 8px}
+.folha-frota .fcard b{font-size:13px}
+.folha-frota td{line-height:1.15}
+.folha-frota .frod{margin-top:4px;padding-top:4px;font-size:10px}
