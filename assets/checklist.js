@@ -17,7 +17,7 @@ const CK = (() => {
   const tag = s => { const x = SIT[s] || [s, 'cinza']; return `<span class="pill ${x[1]}">${x[0]}</span>`; };
   const hora = t => t ? new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
 
-  let D = null, V = { tela: 'home' }, d = null, aut = [], port = null, blq = [], conf = {}, rec = null, dq = null, nl = null, lb = null;
+  let D = null, V = { tela: 'home' }, d = null, aut = [], port = null, blq = [], conf = {}, rec = null, dq = null, nl = null;
   const raiz = () => $('s-ck');
 
   // ---------- rascunho (fica no celular, ligado ao RE de quem começou) ----------
@@ -44,7 +44,7 @@ const CK = (() => {
       if (modo === 'aut') aut = await rpc('campo_aut_lista', { p_token: token });
       if (modo === 'port') { port = await rpc('campo_port_lista', { p_token: token }); conf = {}; }
       if (modo === 'blq') blq = await rpc('campo_blq_lista', { p_token: token });
-      rec = dq = nl = lb = null; render(); tela('s-ck');
+      rec = dq = nl = null; render(); tela('s-ck');
     } catch (err) { alert_(err.message); }
     finally { carregando(false); }
   }
@@ -76,7 +76,7 @@ const CK = (() => {
         <div class="two"><button type="button" class="btn btn-sm btn-ghost" data-act="rascDesc">Descartar</button><button type="button" class="btn btn-sm btn-main" data-act="rascCont">Continuar</button></div></div>`;
     }
     if (uso.length) h += `<div class="mine"><h3>Registrar volta</h3>${uso.map(c => `<button type="button" class="aprov" data-act="volta" data-v="${c.id}"><span><b>${esc(c.placa)}</b><small class="num">${esc(c.numero)}</small></span><span class="pill info">Em uso</span><small class="aprov-d">Toque para registrar a volta.</small></button>`).join('')}</div>`;
-    if (and.length) h += `<div class="mine"><h3>Em andamento</h3>${and.map(c => `<div class="mine-row"><span><b>${esc(c.placa)}</b> <span class="mut num">${esc(c.numero)}</span>${c.situacao === 'aut' && c.autorizador ? `<br><small class="mut">aguardando ${esc(c.autorizador)}</small>` : ''}${c.liberado ? '<br><small class="lib-txt">Item crítico liberado pela frota</small>' : ''}</span><span>${tag(c.situacao)}${['aut', 'port'].includes(c.situacao) ? ` <button type="button" class="linkbtn" data-act="cancelar" data-v="${c.id}">Cancelar</button>` : ''}</span></div>`).join('')}</div>`;
+    if (and.length) h += `<div class="mine"><h3>Em andamento</h3>${and.map(c => `<div class="mine-row"><span><b>${esc(c.placa)}</b> <span class="mut num">${esc(c.numero)}</span>${c.situacao === 'aut' && c.autorizador ? `<br><small class="mut">aguardando ${esc(c.autorizador)}</small>` : ''}</span><span>${tag(c.situacao)}${['aut', 'port'].includes(c.situacao) ? ` <button type="button" class="linkbtn" data-act="cancelar" data-v="${c.id}">Cancelar</button>` : ''}</span></div>`).join('')}</div>`;
     h += `<div class="mine"><h3>Sair com um veículo</h3>${disp.map(v => `<button type="button" class="aprov" data-act="saida" data-v="${esc(v.placa)}"><span><b>${esc(v.placa)}</b><small>${esc(v.modelo || '')} · ${CAT[v.modelo_ck]}</small></span><span class="pill ok">Disponível</span></button>`).join('')
       || '<div class="vazio"><b>Nenhum veículo disponível</b><span>Não há veículo livre nas categorias que você dirige.</span></div>'}</div>`;
     const ocup = vs.filter(v => v.situacao !== 'disp' && !D.abertos.some(c => c.placa === v.placa));
@@ -241,7 +241,7 @@ const CK = (() => {
     const linhas = [['Veículo', esc(d.placa)], ['Checklist', `<span class="num">${esc(r.numero)}</span>`], ['Km', `<span class="num">${fmt(+String(d.km).replace(/\D/g, ''))}</span>`]];
     let msg;
     if (d.tipo === 'saida') {
-      if (r.situacao === 'bloqueado') msg = `<strong>Veículo bloqueado.</strong> Item crítico com problema: ${esc((r.criticos || []).join(', '))}. Ele não pode sair e o aviso já foi para a frota. Se a frota liberar, este mesmo checklist aparece em <b>Em andamento</b> e segue para a autorização. Se precisar sair agora, escolha outro veículo.`;
+      if (r.situacao === 'bloqueado') msg = `<strong>Veículo bloqueado.</strong> Item crítico com problema: ${esc((r.criticos || []).join(', '))}. Ele não pode sair e já foi para a Fernanda. Escolha outro veículo.`;
       else if (r.situacao === 'aut') msg = `Agora <b>${esc(r.autorizador)}</b> precisa autorizar. Avise a pessoa. Depois disso o veículo aparece para o porteiro.`;
       else msg = 'Vá até a portaria: o porteiro confere os itens e libera a saída.';
     } else msg = (r.criticos && r.criticos.length) ? `<strong>Item crítico com problema:</strong> ${esc(r.criticos.join(', '))}. Depois que o porteiro conferir, o veículo fica bloqueado até o conserto.` : 'Passe na portaria: o porteiro confere o que voltou e encerra o checklist.';
@@ -257,12 +257,7 @@ const CK = (() => {
       <br>${c.problemas.length ? `<span class="bad">Itens com problema: ${esc(c.problemas.map(p => `${p.nome} (${p.v})${p.desc ? ': ' + p.desc : ''}`).join(', '))}</span>` : '<span style="color:var(--ok);font-weight:600">Todos os itens conformes</span>'}
       ${c.avarias.length ? `<br><span class="mut">Avarias: ${esc(c.avarias.map(a => `${a.tipo} ${a.local}${a.vezes > 1 ? ` (${a.vezes}x)` : ''}`).join(', '))}</span>` : ''}
       ${c.escadas.length ? `<br>Escada(s): ${c.escadas.map(e => esc(e.num) + (e.nc ? ' <span class="bad">com NC</span>' : '')).join(', ')}` : ''}
-      ${c.obs ? `<br><span class="mut">Obs.: ${esc(c.obs)}</span>` : ''}${faixaLib(c.liberacao)}</div>`;
-  }
-  // faixa "Item crítico liberado pela frota" (23_liberar_critico_portaria.sql)
-  function faixaLib(l) {
-    if (!l) return '';
-    return `<div class="lib-faixa"><b>Item crítico liberado pela frota</b><span>${esc((l.itens || []).join(', '))}</span><span>Por ${esc(l.nome || '')} · ${esc(fdt(l.em))}</span><span>Motivo: ${esc(l.motivo || '')}</span></div>`;
+      ${c.obs ? `<br><span class="mut">Obs.: ${esc(c.obs)}</span>` : ''}</div>`;
   }
   function telaAut() {
     let h = appbar('Autorizações', quem()) + '<div class="pane">' + aviso() + '<div class="who" style="margin-top:-4px">Pedidos em que o motorista escolheu você. Confira e autorize ou recuse.</div><div class="peds">';
@@ -310,15 +305,12 @@ const CK = (() => {
 
   // ---------- veículos bloqueados ----------
   function telaBlq() {
-    let h = appbar('Veículos bloqueados', quem()) + '<div class="pane">' + aviso() + '<div class="who" style="margin-top:-4px">Depois do conserto, descreva o que foi feito e desbloqueie: o motorista faz um checklist novo. Se o veículo pode sair assim mesmo, use <b>Liberar este checklist</b>: o mesmo checklist segue para a autorização.</div><div class="peds">';
-    h += blq.map(v => { const q = dq && dq.placa === v.placa ? dq : null, l = lb && lb.placa === v.placa ? lb : null, man = v.situacao === 'man';
-      return `<div class="ped"><div class="ped-h"><b class="placa">${esc(v.placa)}</b>${man ? '<span class="pill man">Em manutenção</span>' : '<span class="pill venc">Bloqueado</span>'}</div><div class="ped-d">${esc(v.modelo || '')}<br>${man ? `<span class="mtxt">${esc(v.motivo || '')}</span>${v.por ? `<br><span class="mut">Colocado por ${esc(v.por)}${v.em ? ' · ' + esc(fdt(v.em)) : ''}${v.foto ? ' · com foto no painel' : ''}</span>` : ''}` : `<span class="bad">${esc(v.motivo || '')}</span>`}${v.numero ? `<br><span class="mut">Checklist ${esc(v.numero)}${v.motorista ? ' · ' + esc(v.motorista) : ''}</span>` : ''}</div>
-        ${l ? `<div class="field" style="margin-top:8px"><label for="lb-desc">Motivo da liberação</label><input id="lb-desc" data-in="lbDesc" placeholder="Ex.: retrovisor ajustado, pode sair" value="${esc(l.desc || '')}"></div>
-          <div class="hint">O mesmo checklist segue ${v.autorizador ? `para a autorização de <b>${esc(v.autorizador)}</b>` : 'direto para a portaria'}, com o aviso "Item crítico liberado pela frota".</div>${l.erro ? `<div class="err" style="text-align:left">${esc(l.erro)}</div>` : ''}
-          <div class="ped-act"><button type="button" class="btn btn-sm btn-ghost" data-act="lbVoltar">Voltar</button><button type="button" class="btn btn-sm btn-warn" data-act="lbOk" data-v="${esc(v.placa)}">Liberar checklist</button></div>`
-        : q ? `<div class="field" style="margin-top:8px"><label for="dq-desc">O que foi feito</label><input id="dq-desc" data-in="dqDesc" placeholder="Ex.: lâmpada de freio trocada" value="${esc(q.desc || '')}"></div>${q.erro ? `<div class="err" style="text-align:left">${esc(q.erro)}</div>` : ''}
+    let h = appbar('Veículos bloqueados', quem()) + '<div class="pane">' + aviso() + '<div class="who" style="margin-top:-4px">Depois do conserto, descreva o que foi feito e desbloqueie. O veículo volta para a lista de disponíveis.</div><div class="peds">';
+    h += blq.map(v => { const q = dq && dq.placa === v.placa ? dq : null, man = v.situacao === 'man';
+      return `<div class="ped"><div class="ped-h"><b class="placa">${esc(v.placa)}</b>${man ? '<span class="pill man">Em manutenção</span>' : '<span class="pill venc">Bloqueado</span>'}</div><div class="ped-d">${esc(v.modelo || '')}<br>${man ? `<span class="mtxt">${esc(v.motivo || '')}</span>${v.por ? `<br><span class="mut">Colocado por ${esc(v.por)}${v.em ? ' · ' + esc(fdt(v.em)) : ''}${v.foto ? ' · com foto no painel' : ''}</span>` : ''}` : `<span class="bad">${esc(v.motivo || '')}</span>`}${v.numero ? `<br><span class="mut">Checklist ${esc(v.numero)}</span>` : ''}</div>
+        ${q ? `<div class="field" style="margin-top:8px"><label for="dq-desc">O que foi feito</label><input id="dq-desc" data-in="dqDesc" placeholder="Ex.: lâmpada de freio trocada" value="${esc(q.desc || '')}"></div>${q.erro ? `<div class="err" style="text-align:left">${esc(q.erro)}</div>` : ''}
           <div class="ped-act"><button type="button" class="btn btn-sm btn-ghost" data-act="dqVoltar">Voltar</button><button type="button" class="btn btn-sm btn-main" data-act="dqOk" data-v="${esc(v.placa)}">Desbloquear veículo</button></div>`
-          : `<div class="ped-act">${v.liberar ? `<button type="button" class="btn btn-sm btn-warn" data-act="lbAbrir" data-v="${esc(v.placa)}">Liberar este checklist</button>` : ''}<button type="button" class="btn btn-sm btn-main" data-act="desbloquear" data-v="${esc(v.placa)}">${man ? 'Pronto, desbloquear' : 'Consertado, desbloquear'}</button></div>`}</div>`; }).join('')
+          : `<div class="ped-act"><button type="button" class="btn btn-sm btn-main" data-act="desbloquear" data-v="${esc(v.placa)}">${man ? 'Pronto, desbloquear' : 'Consertado, desbloquear'}</button></div>`}</div>`; }).join('')
       || '<div class="vazio"><b>Nenhum veículo bloqueado</b><span>Aparecem aqui os veículos bloqueados por checklist e os que a liderança colocou em manutenção.</span></div>';
     return h + '</div></div>';
   }
@@ -382,15 +374,7 @@ const CK = (() => {
           if (r.faltas || r.bloqueado) alert((r.faltas ? 'Falta registrada: ' + r.faltas + '. ' : '') + (r.bloqueado ? 'O veículo ficou bloqueado.' : ''));
           return abrir('port'); }
         catch (err) { x.erro = err.message; } finally { carregando(false); } break; }
-      case 'desbloquear': dq = { placa: v }; lb = null; V.foco = 'dq-desc'; break;
-      case 'lbAbrir': lb = { placa: v }; dq = null; V.foco = 'lb-desc'; break;
-      case 'lbVoltar': lb = null; break;
-      case 'lbOk': if (!(lb.desc || '').trim()) { lb.erro = 'Escreva o motivo da liberação.'; break; }
-        carregando(true, 'Liberando…');
-        try { const r = await rpc('campo_liberar_critico', { p_token: token, p_placa: v, p_motivo: lb.desc.trim() }); carregando(false);
-          alert(r.situacao === 'port' ? 'Checklist liberado. Foi direto para a portaria.' : `Checklist liberado. Agora ${r.autorizador || 'o supervisor'} precisa autorizar.`);
-          return abrir('blq'); }
-        catch (err) { lb.erro = err.message; } finally { carregando(false); } break;
+      case 'desbloquear': dq = { placa: v }; V.foco = 'dq-desc'; break;
       case 'dqVoltar': dq = null; break;
       case 'dqOk': if (!(dq.desc || '').trim()) { dq.erro = 'Escreva o que foi feito.'; break; }
         try { await rpc('campo_desbloquear', { p_token: token, p_placa: v, p_desc: dq.desc }); return abrir('blq'); } catch (err) { dq.erro = err.message; } break;
@@ -411,7 +395,6 @@ const CK = (() => {
     else if (t === 'recDesc') rec.desc = val;
     else if (t === 'nlDesc') nl.desc = val;
     else if (t === 'dqDesc') dq.desc = val;
-    else if (t === 'lbDesc') lb.desc = val;
     if (d) guardarDepois();
   }
   let tG = null; function guardarDepois() { clearTimeout(tG); tG = setTimeout(() => guardar('auto'), 800); }

@@ -276,7 +276,3 @@ body.fundo-pc>#ck-modal{position:fixed;z-index:60}
 .folha-frota .fcard b{font-size:13px}
 .folha-frota td{line-height:1.15}
 .folha-frota .frod{margin-top:4px;padding-top:4px;font-size:10px}
-/* item crítico liberado pela frota (23_liberar_critico_portaria.sql) */
-.lib-faixa{display:flex;flex-direction:column;gap:2px;margin-top:8px;padding:8px 10px;border-radius:8px;border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent);font-size:13px;line-height:1.35;text-align:left}
-.lib-faixa b{color:var(--warn);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
-.lib-txt{color:var(--warn);font-weight:600}

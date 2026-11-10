@@ -7,7 +7,7 @@ const PCK = (() => {
   const SIT_CK = { aut: 'Aguardando autorização', port: 'Aguardando portaria', uso: 'Em uso', volta: 'Volta a conferir', fim: 'Concluído',
     recusado: 'Não autorizado', barrado: 'Não liberado na portaria', bloqueado: 'Bloqueado na saída', cancelado: 'Cancelado', encerrado: 'Encerrado manualmente' };
   const ORD = { blq: 0, man: 0.5, aut: 1, port: 2, volta: 3, uso: 4, disp: 5 };
-  const TIPO_AL = { nc: 'Item com problema', falta: 'Falta na volta', avaria: 'Avaria nova', diferenca: 'Contagem diferente', bloqueio: 'Veículo bloqueado', recusa: 'Saída recusada', liberado: 'Item crítico liberado' };
+  const TIPO_AL = { nc: 'Item com problema', falta: 'Falta na volta', avaria: 'Avaria nova', diferenca: 'Contagem diferente', bloqueio: 'Veículo bloqueado', recusa: 'Saída recusada' };
   const AV = { R: 'Riscado', A: 'Amassado', Q: 'Quebrado' };
   const NIV = ['E', '1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8', 'F'];
   const tag = s => { const x = SIT[s] || [s, 'cinza']; return `<span class="pill ${x[1]}">${x[0]}</span>`; };
@@ -20,7 +20,7 @@ const PCK = (() => {
   const OPC = { STD: ['C', 'NC', 'NA'], LAT: ['C', 'R', 'A'], EXT: ['C', 'R', 'Q'] };
 
   let A = null, F = null, E = null, CAD = null, PP = [], AUD = null;
-  let ordem = 'sit', busca = { offset: 0 }, buscaE = { offset: 0 }, res = null, resE = null, rec = null, enc = null, dq = null, excl = null, lb = null;
+  let ordem = 'sit', busca = { offset: 0 }, buscaE = { offset: 0 }, res = null, resE = null, rec = null, enc = null, dq = null, excl = null;
   let M = {}, mf = null;   // manutenções abertas por placa e o formulário "Colocar em manutenção" (22_manutencao.sql)
   const MOTIVOS_MAN = ['Revisão na concessionária', 'Revisão preventiva', 'Troca de pneus', 'Funilaria', 'Elétrica', 'Mecânica'];
   try { ordem = localStorage.getItem('fleet_ordem') || 'sit'; } catch (_) {}
@@ -84,16 +84,11 @@ const PCK = (() => {
     if (ver) h.push(cardAvarias(), cardBusca());
     $('tab-ck').innerHTML = h.join('');
   }
-  // faixa "Item crítico liberado pela frota" (23_liberar_critico_portaria.sql)
-  function faixaLib(l) {
-    if (!l) return '';
-    return `<div class="lib-faixa"><b>Item crítico liberado pela frota</b><span>${esc((l.itens || []).join(', '))}</span><span>Por ${esc(l.nome || '')} · ${dt(l.em)}${l.via === 'celular' ? ' · pelo celular' : ''}</span><span>Motivo: ${esc(l.motivo || '')}</span></div>`;
-  }
   function resumo(c) {
     return `<div class="ped-h"><b class="placa">${esc(c.placa)}</b><span class="mut num">${esc(c.numero)}</span></div><div class="ped-d">${esc(c.veiculo || '')} · <b>${esc(c.motorista)}</b> · RE ${esc(c.motorista_re || '')}<br><span class="mut">Checklist às ${dt(c.saida_em)} · km ${fmt(+c.km)}</span>
       <br>${c.problemas.length ? `<span class="bad">Itens com problema: ${esc(c.problemas.map(p => `${p.nome} (${p.v})${p.desc ? ': ' + p.desc : ''}`).join(', '))}</span>` : '<span style="color:var(--ok);font-weight:600">Todos os itens conformes</span>'}
       ${c.avarias.length ? `<br><span class="mut">Avarias: ${esc(c.avarias.map(a => `${a.tipo} ${a.local}${a.vezes > 1 ? ` (${a.vezes}x)` : ''}`).join(', '))}</span>` : ''}
-      ${c.escadas.length ? `<br>Escada(s): ${c.escadas.map(e => esc(e.num)).join(', ')}` : ''}${faixaLib(c.liberacao)}</div>`;
+      ${c.escadas.length ? `<br>Escada(s): ${c.escadas.map(e => esc(e.num)).join(', ')}` : ''}</div>`;
   }
   function cardAut(c) {
     const r = rec && rec.id === c.id ? rec : null;
@@ -126,15 +121,14 @@ const PCK = (() => {
     return `<div class="card"><div class="card-h"><h2>Situação da frota</h2><span class="sub">${n('disp')} disponíveis · ${n('uso')} em uso · ${n('aut') + n('port') + n('volta')} aguardando · ${n('blq')} bloqueados${n('man') ? ` · ${n('man')} em manutenção` : ''}</span>
       <div class="chips" style="margin-left:auto">${[['sit', 'Por situação'], ['cat', 'Por categoria'], ['placa', 'Por placa']].map(([k, t]) => `<button type="button" class="chip" data-a="ordem" data-v="${k}" aria-pressed="${ordem === k}">${t}</button>`).join('')}<button type="button" class="btn btn-sm btn-main" data-a="folhaFrota">Imprimir</button></div></div>
       <div class="tbl-wrap"><table><thead><tr><th>Veículo</th><th>Situação</th><th>Com quem / desde</th><th>Km</th><th></th></tr></thead><tbody>${vs.map(v => {
-        const e = enc && enc.ck === v.ck ? enc : null, q = dq && dq.placa === v.placa ? dq : null, l = lb && lb.placa === v.placa ? lb : null;
+        const e = enc && enc.ck === v.ck ? enc : null, q = dq && dq.placa === v.placa ? dq : null;
         const ckv = v.ck || (v.bloqueio && v.bloqueio.checklist);
         let act = ckv ? `<button type="button" class="linkbtn" data-a="folha" data-v="${ckv}">Ver checklist</button>` : '';
         if (A.opera && ['aut', 'port'].includes(v.situacao)) act += ` <button type="button" class="btn btn-sm btn-ghost" data-a="cancelar" data-v="${v.ck}">Cancelar</button>`;
         if (A.opera && ['uso', 'volta'].includes(v.situacao)) act += e ? `<div class="enc"><input data-i="encMotivo" placeholder="Motivo (obrigatório)" value="${esc(e.motivo || '')}"><input data-i="encKm" class="num" inputmode="numeric" placeholder="Km atual (opcional)" value="${esc(e.km || '')}">${e.erro ? `<span class="bad">${esc(e.erro)}</span>` : ''}<div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="encVoltar">Voltar</button><button type="button" class="btn btn-sm btn-warn" data-a="encOk" data-v="${v.ck}">Encerrar</button></div></div>` : ` <button type="button" class="btn btn-sm btn-ghost" data-a="encerrar" data-v="${v.ck}">Encerrar</button>`;
         act += acoesManut(v);
-        if (A.opera && v.liberavel) act += l ? `<div class="enc"><input data-i="lbDesc" placeholder="Motivo da liberação (obrigatório)" value="${esc(l.desc || '')}"><span class="mut" style="font-size:12px">O mesmo checklist de ${esc(v.blq_motorista || 'quem saiu')} segue ${v.blq_autorizador ? 'para a autorização de ' + esc(v.blq_autorizador) : 'direto para a portaria'}, com o aviso "Item crítico liberado pela frota".</span>${l.erro ? `<span class="bad">${esc(l.erro)}</span>` : ''}<div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="lbVoltar">Voltar</button><button type="button" class="btn btn-sm btn-warn" data-a="lbOk" data-v="${esc(v.placa)}">Liberar checklist</button></div></div>` : ` <button type="button" class="btn btn-sm btn-warn" data-a="lbAbrir" data-v="${esc(v.placa)}">Liberar este checklist</button>`;
         if (A.opera && ['blq', 'man'].includes(v.situacao)) act += q ? `<div class="enc"><input data-i="dqDesc" placeholder="O que foi feito (obrigatório)" value="${esc(q.desc || '')}">${q.erro ? `<span class="bad">${esc(q.erro)}</span>` : ''}<div class="ped-act" style="margin:0"><button type="button" class="btn btn-sm btn-ghost" data-a="dqVoltar">Voltar</button><button type="button" class="btn btn-sm btn-main" data-a="dqOk" data-v="${esc(v.placa)}">Desbloquear</button></div></div>` : ` <button type="button" class="btn btn-sm btn-main" data-a="desbloquear" data-v="${esc(v.placa)}">Desbloquear</button>`;
-        return `<tr><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || '')} · ${catDe(v)}</small></td><td>${tag(v.situacao)}${v.situacao === 'blq' && v.bloqueio ? `<br><small class="bad">${esc(v.bloqueio.motivo || '')}</small>${v.blq_motorista ? `<br><small class="mut">checklist de ${esc(v.blq_motorista)}</small>` : ''}` : ''}${v.liberacao && v.situacao !== 'blq' ? `<br><span class="pill prox" title="${esc((v.liberacao.itens || []).join(', ') + ' · ' + (v.liberacao.motivo || ''))}">Item crítico liberado pela frota</span>` : ''}${infoManut(v)}${v.situacao === 'aut' && v.autorizador ? `<br><small class="mut">aguardando ${esc(v.autorizador)}</small>` : ''}</td>
+        return `<tr><td><b>${esc(v.placa)}</b><br><small class="mut">${esc(v.modelo || '')} · ${catDe(v)}</small></td><td>${tag(v.situacao)}${v.situacao === 'blq' && v.bloqueio ? `<br><small class="bad">${esc(v.bloqueio.motivo || '')}</small>` : ''}${infoManut(v)}${v.situacao === 'aut' && v.autorizador ? `<br><small class="mut">aguardando ${esc(v.autorizador)}</small>` : ''}</td>
           <td>${v.com ? `${esc(v.com)}<br><small class="mut num">${dt(v.desde)}</small>` : '—'}</td><td class="num">${v.km ? fmt(v.km) : '—'}</td><td>${act}</td></tr>`; }).join('')}</tbody></table></div></div>`;
   }
   // ---------- em manutenção ----------
@@ -229,9 +223,8 @@ const PCK = (() => {
       ${c.encerramento ? `<div class="freg" style="background:#fdeee2;border-color:#f3c39b"><small style="color:#e2711d">4 · Encerrado manualmente</small><b>${esc(quemE(c, c.encerramento.por).nome)}</b><span class="num">${dt(c.encerramento.em)}</span><div>${esc(c.encerramento.motivo)}</div></div>`
         : c.cancelamento ? `<div class="freg" style="background:#f6f7f9"><small>Cancelado</small><b>${esc(quemE(c, c.cancelamento.por).nome)}</b><span class="num">${dt(c.cancelamento.em)}</span><div>${esc(c.cancelamento.motivo || '')}</div></div>`
         : reg('4 · Volta conferida por (portaria)', pv && quemE(c, pv.por), pv ? dt(pv.em) : '', 'CONFIRMADO COM PIN')}</div>
-      ${c.liberacao ? `<div class="fdef" style="margin:12px 0 0;border-left:4px solid #e2711d;background:#fdeee2;border-color:#f3c39b"><div><small style="color:#e2711d">Item crítico liberado pela frota</small><div><b>${esc((quemE(c, c.liberacao.por) || {}).nome || '')}</b> · RE ${esc((quemE(c, c.liberacao.por) || {}).re || '')} · ${dt(c.liberacao.em)}${c.liberacao.via === 'celular' ? ' · pelo celular' : ' · pelo painel'}<br>Itens críticos com problema na saída: ${esc((c.liberacao.itens || []).join(', '))}<br>Motivo: ${esc(c.liberacao.motivo || '')}</div></div></div>` : ''}
       ${c.desbloqueio ? `<div class="fdef" style="margin:12px 0 0;border-left:4px solid #1f8a5b;background:#e4f4ec;border-color:#b7dcc3"><div><small style="color:#1f8a5b">Desbloqueado</small><div><b>${esc(quemE(c, c.desbloqueio.por).nome)}</b> · RE ${esc(quemE(c, c.desbloqueio.por).re || '')} · ${dt(c.desbloqueio.em)}<br>Motivo do bloqueio: ${esc(c.desbloqueio.motivo || '')}<br>O que foi feito: ${esc(c.desbloqueio.desc)}</div></div></div>`
-        : sit === 'BLOQUEADO' || c.situacao === 'bloqueado' || (c.recusa && c.recusa.motivo === 'Defeito no veículo') ? '<div class="fdef" style="margin:12px 0 0;border-left:4px solid #e2711d"><div><small>Veículo bloqueado</small><div>Desbloqueio: Fernanda, Deysimar ou mecânico, com a descrição do que foi feito.' + (c.situacao === 'bloqueado' ? ' Ou liberar este mesmo checklist, com o motivo.' : '') + '</div></div></div>' : ''}
+        : sit === 'BLOQUEADO' || c.situacao === 'bloqueado' || (c.recusa && c.recusa.motivo === 'Defeito no veículo') ? '<div class="fdef" style="margin:12px 0 0;border-left:4px solid #e2711d"><div><small>Veículo bloqueado</small><div>Desbloqueio: Fernanda, Deysimar ou mecânico, com a descrição do que foi feito.</div></div></div>' : ''}
       <div class="frod"><div>Documento gerado pelo FLEET, sistema de frota da Manaus Luz.<br>Código de verificação: <span class="fcod">${esc(c.codigo)}</span><br>Para conferir: painel → Checklist → Buscar checklist, digite o código</div><div style="margin-left:auto;text-align:right" class="num">Impresso em ${fdt(new Date())}<br>por ${esc(curto(eu.nome))}</div></div></div>`;
     return h;
   }
@@ -506,15 +499,7 @@ const PCK = (() => {
       case 'encVoltar': enc = null; return pintaCk();
       case 'encOk': { if (!(enc.motivo || '').trim()) { enc.erro = 'Escreva o motivo.'; return pintaCk(); } const km = enc.km ? +String(enc.km).replace(/\D/g, '') : null;
         if (await vai(() => rpc('painel_ck_encerrar', { p_ck: +v, p_motivo: enc.motivo, p_km: km }), 'Encerrado. Veículo disponível.')) { enc = null; carregarCk(); } return; }
-      case 'desbloquear': dq = { placa: v }; mf = null; lb = null; return pintaCk();
-      case 'lbAbrir': lb = { placa: v }; dq = null; mf = null; enc = null; return pintaCk();
-      case 'lbVoltar': lb = null; return pintaCk();
-      case 'lbOk': { if (!(lb.desc || '').trim()) { lb.erro = 'Escreva o motivo da liberação.'; return pintaCk(); }
-        let r = null;
-        if (await vai(async () => { r = await rpc('painel_liberar_critico', { p_placa: v, p_motivo: lb.desc.trim() }); })) {
-          toast(r && r.situacao === 'port' ? 'Checklist liberado. Foi direto para a portaria.' : `Checklist liberado. Agora ${r && r.autorizador ? r.autorizador : 'o supervisor'} precisa autorizar.`);
-          lb = null; carregarCk(); }
-        else { lb.erro = ''; } return; }
+      case 'desbloquear': dq = { placa: v }; mf = null; return pintaCk();
       case 'manAbrir': mf = { placa: v }; dq = null; enc = null; return pintaCk();
       case 'manVoltar': mf = null; return pintaCk();
       case 'manOk': { if (!(mf.motivo || '').trim()) { mf.erro = 'Escreva o motivo.'; return pintaCk(); }
@@ -561,7 +546,7 @@ const PCK = (() => {
   }
   function entrada(el) {
     const k = el.dataset.i, val = el.value;
-    if (k === 'recDesc') rec.desc = val; else if (k === 'encMotivo') enc.motivo = val; else if (k === 'encKm') enc.km = val; else if (k === 'dqDesc') dq.desc = val; else if (k === 'lbDesc') { lb.desc = val; lb.erro = ''; } else if (k === 'manMotivo') { mf.motivo = val; mf.erro = ''; }
+    if (k === 'recDesc') rec.desc = val; else if (k === 'encMotivo') enc.motivo = val; else if (k === 'encKm') enc.km = val; else if (k === 'dqDesc') dq.desc = val; else if (k === 'manMotivo') { mf.motivo = val; mf.erro = ''; }
     else if (k === 'bTxt') busca.txt = val; else if (k === 'bDe') busca.de = val; else if (k === 'bAte') busca.ate = val; else if (k === 'bPlaca') busca.placa = val; else if (k === 'bSit') busca.sit = val; else if (k === 'bProb') busca.prob = val;
     else if (k === 'beTxt') buscaE.txt = val; else if (k === 'beDe') buscaE.de = val; else if (k === 'beAte') buscaE.ate = val; else if (k === 'beNum') buscaE.num = val; else if (k === 'beRes') buscaE.res = val;
     else if (k === 'filtroP') { filtroP = val; pintaCad(); const i = document.querySelector('[data-i=filtroP]'); i.focus(); i.setSelectionRange(val.length, val.length); }
